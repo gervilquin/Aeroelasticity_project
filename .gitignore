@@ -43,3 +43,4 @@
 /var/package/*
 !/var/package/*.xml
 
+*.asv
