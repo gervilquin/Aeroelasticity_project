@@ -1,0 +1,28 @@
+function A = compute_A_matrix(col_coor,panel_coor)
+    
+    % Initialize the influece matrix
+    A = zeros(lenght(panel_normal));
+
+    for i = 1:length(panel_normal)
+        for j = 1:length(panel_normal)
+            
+            r_1 = col_coor(i,:) - panel_coor(1,:,j);
+            r_2 = col_coor(i,:) - panel_coor(2,:,j);
+            r_3 = col_coor(i,:) - panel_coor(3,:,j);
+            r_4 = col_coor(i,:) - panel_coor(4,:,j);
+
+            l_12 = norm(panel_coor(1,:,j)-panel_coor(2,:,j));
+            l_23 = norm(panel_coor(2,:,j)-panel_coor(3,:,j));
+            l_34 = norm(panel_coor(3,:,j)-panel_coor(4,:,j));
+
+            v_12 = (1/4pi) * (cross(r1,r2))/(norm(cross(r1,r2))^2)
+            v_23
+            v_34
+
+            
+            A(i,j) =() *panel_normal(i,:);
+        end
+    end
+    
+
+end
