@@ -32,7 +32,7 @@ y_sections =       [0,       1,           0.0
 y_sections = y_sections(:,2:3);
 
 nsec = length(y_sections(:,2))-1; % number of panels
-neset = 10;%<<<<<<<<<< Input 
+neset = 1;%<<<<<<<<<< Input 
 nel = nsec*neset; % total number of elements
 
 % Centers
@@ -57,11 +57,31 @@ n = length(y_nodal);
 Tn = ConnectivityElements(n-1);
 Ts = ConnectivitySubsets(Tn,nsec-1,neset);
 
-% Define stifness matrix
-K = zeros(3*n);
-for e=1:neset*nsec
-    l = y_nodal(Tn)
+% Define stiffness matrix
+K = sparse(3*n,3*n);
+for i = 1:neset*nsec
+    I = zeros(2*3,1); % (nnodes_el*nDOFs, 1)
+    l = y_nodal(Tn(i,2)) - y_nodal(Tn(i,1));
+    for k = 1:3 % 3 DOFs
+        I(k,1) = 3*(Tn(i,1)-1)+k;
+        I(k+3,1) = 3*(Tn(i,2)-1)+k;
+    end
+    Kt = (GJ/l)*[ 1 0 0 -1 0 0;
+                  0 0 0  0 0 0;
+                  0 0 0  0 0 0;
+                 -1 0 0  1 0 0;
+                  0 0 0  0 0 0;
+                  0 0 0  0 0 0];
+    Kb = (EI/l^3)*[0  0    0   0   0   0   ;
+                   0  12  6*l  0  -12  6*l ; 
+                   0 6*l 4*l^2 0 -6*l 2*l^2;
+                   0  0    0   0   0   0   ;
+                   0 -12 -6*l  0   12  -6*l;
+                   0 6*l 2*l^2 0 -6*l 4*l^2];
+    K(I,I) = K(I,I) + Kt + Kb;
 end
+
+
 
 %% 3. Aerodynamics modelling
 
