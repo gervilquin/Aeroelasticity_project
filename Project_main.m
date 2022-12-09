@@ -104,8 +104,6 @@ segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);
 
 % Compute Influence matrix
 A_aero = compute_A_matrix(col_pos,segment_coor);
-figure()
-mesh(A_aero)
 
 % Compute Lift
 alpha_test = 1*pi/180;
