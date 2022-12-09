@@ -71,7 +71,8 @@ chord_y = ones(1,length(y_nodal))*chord;
 S_ = compute_element_surface(chord_y,y_nodal);
 
 % Compute chord/4 point and the colocation point span wise location
-[]
+[ac_x,ac_y] = compute_aero_point(y_nodal,chord_y,x_ac);
+[col_x,col_y] = compute_aero_point(y_nodal,chord_y,x_col);
 
 
 %% 4. Aeroelastic linear coupling
