@@ -31,8 +31,9 @@ y_sections =       [0,       1,           0.0
 
 y_sections = y_sections(:,2:3);
 
-nsec = length(y_sections(:,2)); % number of panels
+nsec = length(y_sections(:,2))-1; % number of panels
 neset = 10;%<<<<<<<<<< Input 
+nel = nsec*neset; % total number of elements
 
 % Centers
 x_sc = 0.43;
