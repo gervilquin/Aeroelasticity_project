@@ -32,7 +32,8 @@ y_sections =       [0,       1,           0.0
 y_sections = y_sections(:,2:3);
 
 nsec = length(y_sections(:,2))-1; % number of panels
-neset = 1;%<<<<<<<<<< Input 
+neset = 5;%<<<<<<<<<< Input 
+
 nel = nsec*neset; % total number of elements
 
 % Centers
@@ -42,6 +43,9 @@ x_col = 3/4;
 
 % Geometry
 chord = 100; %mm
+
+% Aerodynamic
+U_inf = 1; %m/s
 
 % Material properties
 EI = 6500;
@@ -127,6 +131,8 @@ end
 
 %% 3. Aerodynamics modelling
 
+
+
 % Define the chord vector
 chord_y = ones(1,length(y_nodal))*chord;
 
@@ -134,8 +140,23 @@ chord_y = ones(1,length(y_nodal))*chord;
 S_ = compute_element_surface(chord_y,y_nodal);
 
 % Compute chord/4 point and the colocation point span wise location
-[ac_x,ac_y] = compute_aero_point(y_nodal,chord_y,x_ac);
-[col_x,col_y] = compute_aero_point(y_nodal,chord_y,x_col);
+ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);
+col_pos = compute_aero_point(y_nodal,chord_y,x_col);
+segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);
+
+% Compute Influence matrix
+A_aero = compute_A_matrix(col_pos,segment_coor);
+
+% Compute Lift
+alpha_test = 1*pi/180;
+alpha_array = alpha_test*ones(length(S_),1);
+
+Lift = -1*U_inf^2*diag(S_/10^6)*inv(A_aero)*alpha_array;
+
+figure()
+plot(ac_pos(:,2),Lift)
+
+
 
 
 %% 4. Aeroelastic linear coupling
