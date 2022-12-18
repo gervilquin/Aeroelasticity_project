@@ -8,4 +8,6 @@ function [y,x] = compute_symmetric_airfoil(naca_2dt,x0,xf,n,length_airfoil)
     end
     y = y*length_airfoil;
     x = x*length_airfoil;
+
+    % In order to obtain a more precise 
 end
