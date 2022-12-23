@@ -53,6 +53,14 @@ GJ = 5500;
 
 %% 2. Structural modelling
 
+material.Al.rho = 2795;
+material.Al.E = 71000;
+material.Al.v = 0.33;
+material.Nylon.rho = 930;
+material.Nylon.E = 1700;
+material.Nylon.v = 0.394;
+naca_2dt = 18;
+
 % Define the nodal coordinates
 y_nodal = compute_x_nodal(y_sections(:,2),neset);
 n = length(y_nodal);
@@ -85,6 +93,40 @@ for i = 1:neset*nsec
     K(I,I) = K(I,I) + Kt + Kb;
 end
 
+% Define mass matrix
+M = sparse(3*n,3*n);
+for i = 1:neset*nsec
+    I = zeros(2*3,1); % (nnodes_el*nDOFs, 1)
+    l = y_nodal(Tn(i,2)) - y_nodal(Tn(i,1));
+    for k = 1:3 % 3 DOFs
+        I(k,1) = 3*(Tn(i,1)-1)+k;
+        I(k+3,1) = 3*(Tn(i,2)-1)+k;
+    end
+    [rhoA] = compute_avg_density(material,naca_2dt,chord);
+    [x_cm] = compute_mass_center(material,rhoA,naca_2dt,chord);
+    [I_cm] = compute_inertia_mass_center(x_cm);
+
+    Mt = (Icm*l/6)*[2 0 0 1 0 0;
+                    0 0 0 0 0 0;
+                    0 0 0 0 0 0;
+                    1 0 0 2 0 0;
+                    0 0 0 0 0 0;
+                    0 0 0 0 0 0];
+    Mb = (rhoA*l/420)*[0   0       0   0    0       0 ;
+                       0  156    22*l  0   54    -13*l;
+                       0  22*l  4*l^2  0  13*l  -3*l^2;
+                       0   0       0   0    0       0 ;
+                       0   54    13*l  0   156   -22*l;
+                       0 -13*l -3*l^2  0 -22*l   4*l^2];
+    d = x_cm - x_sc;
+    d_m = [ 1  0  0  0  0  0;
+         -d  1  0  0  0  0;
+          0  0  1  0  0  0;
+          0  0  0  1  0  0;
+          0  0  0 -d  1  0;
+          0  0  0  0  0  1];
+    M(I,I) = M(I,I) + d_m'*(Mt + Mb)*d;
+end
 
 
 %% 3. Aerodynamics modelling
