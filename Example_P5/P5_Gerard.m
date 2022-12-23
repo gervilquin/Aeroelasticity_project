@@ -91,6 +91,7 @@ for i=1:length(sig_)
         Drk = real(dDdk_);
         DiK = imag(dDdk_);
         % Evalute determinant components (real and imaginary)
+        
         % Evaluate jacobina matrix
         J 
         % Update solution
