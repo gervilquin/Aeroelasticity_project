@@ -162,7 +162,7 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 %% 4. Aeroelastic linear coupling
 
 [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,n,nel,Tn);
-%I_fL = compute_I_fL(x_sc-x_ac);
+I_fL = compute_I_fL(n,nel,x_sc-x_ac);
 
 u = zeros(3*n,1);
 u_dot = zeros(3*n,1);
@@ -170,8 +170,11 @@ u_dotdot = zeros(3*n,1);
 
 alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
 L = -U_inf^2*S_aero\A_aero*alpha;
+F_nod = I_fL*L;
 
 %% 5. Aeroelastic solver
+
+
 
 
 
