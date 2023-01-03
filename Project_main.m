@@ -137,7 +137,7 @@ end
 chord_y = ones(1,length(y_nodal))*chord;
 
 % Compute area of the elements
-S_aero = compute_element_surface(chord_y,y_nodal);
+S = compute_element_surface(chord_y,y_nodal);
 
 % Compute chord/4 point and the colocation point span wise location
 ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);
@@ -146,18 +146,6 @@ segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);
 
 % Compute Influence matrix
 A_aero = compute_A_matrix(col_pos,segment_coor);
-
-% % Compute Lift
-% alpha_test = 1*pi/180;
-% alpha_array = alpha_test*ones(length(S_),1);
-% 
-% Lift = -1*U_inf^2*diag(S_/10^6)*inv(A_aero)*alpha_array;
-% 
-% figure()
-% plot(ac_pos(:,2),Lift)
-
-
-
 
 %% 4. Aeroelastic linear coupling
 
@@ -169,10 +157,41 @@ u_dot = zeros(3*n,1);
 u_dotdot = zeros(3*n,1);
 
 alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
-L = -U_inf^2*S_aero\A_aero*alpha;
+L = -U_inf^2*S\A_aero*alpha;
 F_nod = I_fL*L;
 
 %% 5. Aeroelastic solver
+
+Uinf_ = 1:1:50;
+
+% Get the eigenvalues of M and K
+[eig_vector, eig_value] = eigs(K,M,20,'sm');
+
+for i = 1:length(Uinf_)
+    U_inf = Uinf_(i);
+    rho_inf = 1;
+
+    % Compute Aerodynamic matrices
+    S_aero = -U_inf^2*rho_inf*S;
+
+    % Compute coupling matrices
+    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,n,nel,Tn);
+    I_fL = compute_I_fL(n,nel,x_sc-x_ac);
+
+    % Compute aero mass, stiffness and damping matrices
+    M_a = I_fL*S_aero\A_aero*I_au_2;
+    C_a = I_fL*S_aero\A_aero*I_au_1;
+    K_a = I_fL*S_aero\A_aero*I_au_0;
+    
+    % Compute efective matrices
+    Meff = M + M_a; 
+    Ceff = C_a;
+    Keff = K + K_a;
+
+    % Compute D(Un)
+    
+    
+end
 
 
 

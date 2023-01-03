@@ -2,11 +2,11 @@ clear
 close all
 
 % Data
-a_ = -0.2;
-r_ = 0.5;
+a_ = -0.2; %shear center location
+r_ = 0.5; 
 x_ = 0.3;
-mu_ = 20;
-sig_ = 0.01:0.01:1.8;
+mu_ = 20; % Mass/density ratio
+sig_ = 0.01:0.01:1.8; % Stiffness ratio
 beta = 0.5;
 
 % Matrices definitions
@@ -42,6 +42,7 @@ for i = 1:length(sig_)
     
     % System matrix
     D = @(k) K_\(M_+M1_+1i/k*(C2_-C(k)*C1_)+1/k^2*C(k)*K1_);
+    
     dDdk = @(k) K_\((dFdk(k)/k^2 - 2*F(k)/k^3)*K1_ + (dGdk(k)/k - G(k)/k^2)*C1_) ...
            + 1i*K_\((dGdk(k)/k^2 - 2*G(k)/k^3)*K1_ + (dFdk(k)/k - F(k)/k^2)*C1_ - 1/k^2*C2_);
     
