@@ -137,7 +137,9 @@ end
 chord_y = ones(1,length(y_nodal))*chord;
 
 % Compute area of the elements
-S = compute_element_surface(chord_y,y_nodal);
+%S = compute_element_surface(chord_y,y_nodal);
+S = compute_element_length(y_nodal);
+
 
 % Compute chord/4 point and the colocation point span wise location
 ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);
