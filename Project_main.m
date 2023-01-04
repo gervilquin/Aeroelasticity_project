@@ -104,9 +104,9 @@ for i = 1:neset*nsec
     end
     [rhoA] = compute_avg_density(material,naca_2dt,chord);
     [x_cm] = compute_mass_center(material,rhoA,naca_2dt,chord);
-    [I_cm] = compute_inertia_mass_center(x_cm);
+    [I_cm] = compute_inertia_mass_center(x_cm,material,naca_2dt,chord);
 
-    Mt = (Icm*l/6)*[2 0 0 1 0 0;
+    Mt = (I_cm*l/6)*[2 0 0 1 0 0;
                     0 0 0 0 0 0;
                     0 0 0 0 0 0;
                     1 0 0 2 0 0;
@@ -162,10 +162,11 @@ F_nod = I_fL*L;
 
 %% 5. Aeroelastic solver
 
-Uinf_ = 1:1:50;
+Uinf_ = logspace(-10,1,100);
+p_values = zeros(length(Uinf_),1);
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(K,M,20,'sm');
+%[eig_vector, eig_value] = eigs(K,M,20,'sm');
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
@@ -179,19 +180,33 @@ for i = 1:length(Uinf_)
     I_fL = compute_I_fL(n,nel,x_sc-x_ac);
 
     % Compute aero mass, stiffness and damping matrices
-    M_a = I_fL*S_aero\A_aero*I_au_2;
-    C_a = I_fL*S_aero\A_aero*I_au_1;
-    K_a = I_fL*S_aero\A_aero*I_au_0;
+    M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;
+    C_a = I_fL*(S_aero*inv(A_aero))*I_au_1;
+    K_a = I_fL*(S_aero*inv(A_aero))*I_au_0;
     
     % Compute efective matrices
     Meff = M + M_a; 
     Ceff = C_a;
     Keff = K + K_a;
 
-    % Compute D(Un)
-    
+    % >> P method as a quadratic eigenvalue problem <<
+    B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
+    A = [K zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
+
+    [eig_vector, eig_value] = eigs(A,B,30,'sm');
+
+    p_values(i) = max(real(-1./diag(eig_value)));
     
 end
+
+
+%% Plots
+figure()
+plot(Uinf_,p_values)
+grid on
+grid minor
+ylabel("$max(Re(p_i))$",'Interpreter','latex')
+xlabel("$U_{\infty}$",'Interpreter','latex')
 
 
 
