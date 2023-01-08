@@ -32,7 +32,7 @@ y_sections =       [0,       1,           0.0
 y_sections = y_sections(:,2:3);
 
 Nsec = length(y_sections(:,2))-1; % number of panels
-Neset = 5;%<<<<<<<<<< Input 
+Neset = 10;%<<<<<<<<<< Input 
 
 Nel = Nsec*Neset; % total number of elements
 
@@ -112,7 +112,7 @@ I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
 % F_nod = I_fL*L;
 
 %% Static case solution
-solve_static = true;
+solve_static = false;
 if solve_static == true
     solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,10)
 end
@@ -120,11 +120,13 @@ end
 
 %% 5. Aeroelastic solver
 
-Uinf_ = logspace(-10,1,100);
+%Uinf_ = logspace(-10,-1,100);
+Uinf_ = linspace(0.1,10,100);
 p_values = zeros(length(Uinf_),1);
+p_values_red = zeros(length(Uinf_),1);
 
 % Get the eigenvalues of M and K
-%[eig_vector, eig_value] = eigs(K,M,20,'sm');
+[eig_vector, eig_value] = eigs(K,M,100,'sm');
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
@@ -149,12 +151,28 @@ for i = 1:length(Uinf_)
 
     % >> P method as a quadratic eigenvalue problem <<
     B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
-    A = [K zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
+    A = [Keff zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
 
-    [eig_vector, eig_value] = eigs(A,B,30,'sm');
+    [eig_vector_p, eig_value_p] = eigs(A,B,30,'sm');
 
-    p_values(i) = max(real(-1./diag(eig_value)));
+    p_values(i) = max(real(-1./diag(eig_value_p)));
+
+    % >> reduced set
+    Meff_red = eig_vector'*Meff*eig_vector;
+    Ceff_red = eig_vector'*Ceff*eig_vector;
+    Keff_red = eig_vector'*Keff*eig_vector;
+
+%     B_red = [Ceff_red  Meff_red ; -1*eye(size(Keff_red )) zeros(size(Keff_red ))];
+%     A_red = [Keff_red  zeros(size(Keff_red )); zeros(size(Keff_red )) eye(size(Keff_red))];
+%     
+%     [eig_vector_p_red, eig_value_p_red] = eigs(A_red,B_red,30,'sm');
     
+    D = [Keff_red\Ceff_red Keff_red\Meff_red;
+        -1*eye(size(Keff_red)) zeros(size(Keff_red))];
+
+    [eig_vector_p_red, eig_value_p_red] = eigs(D,30,'sm');
+
+    p_values_red(i) = max(real(-1./diag(eig_value_p_red)));
 end
 
 
@@ -165,6 +183,15 @@ grid on
 grid minor
 ylabel("$max(Re(p_i))$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
+hold off
+
+figure()
+plot(Uinf_,p_values_red)
+grid on
+grid minor
+ylabel("$max(Re(p_i))$",'Interpreter','latex')
+xlabel("$U_{\infty}$",'Interpreter','latex')
+hold off
 
 
 
