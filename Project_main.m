@@ -8,7 +8,7 @@ addpath('functions\')
 
 %% 1. Initialisation 
 
-% Elmements definition
+% Definition of the location of the ribs
 %                   Rib     Node j      yj  
 y_sections =       [0,       1,           0.0
                     1,       2,           38.4
@@ -31,12 +31,12 @@ y_sections =       [0,       1,           0.0
 
 y_sections = y_sections(:,2:3);
 
-nsec = length(y_sections(:,2))-1; % number of panels
-neset = 5;%<<<<<<<<<< Input 
+Nsec = length(y_sections(:,2))-1; % number of panels
+Neset = 5;%<<<<<<<<<< Input 
 
-nel = nsec*neset; % total number of elements
+Nel = Nsec*Neset; % total number of elements
 
-% Centers
+% Centers >Previously computed<
 x_sc = 0.43;
 x_ac = 1/4;
 x_col = 3/4;
@@ -45,14 +45,15 @@ x_col = 3/4;
 chord = 100; %mm
 
 % Aerodynamic
-U_inf = 1; %m/s
+U_inf = 100; %m/s
 
-% Material properties
+% Material properties >Previously computed<
 EI = 6500;
 GJ = 5500;
 
 %% 2. Structural modelling
 
+% Material properties
 material.Al.rho = 2795;
 material.Al.E = 71000;
 material.Al.v = 0.33;
@@ -62,76 +63,22 @@ material.Nylon.v = 0.394;
 naca_2dt = 18;
 
 % Define the nodal coordinates
-y_nodal = compute_x_nodal(y_sections(:,2),neset);
-n = length(y_nodal);
+y_nodal = compute_x_nodal(y_sections(:,2),Neset);
+Nnod = length(y_nodal); % number
 
 % define the connectivity matrixs
-Tn = ConnectivityElements(n-1);
-Ts = ConnectivitySubsets(Tn,nsec-1,neset);
+Tn = ConnectivityElements(Nnod-1);
+Ts = ConnectivitySubsets(Tn,Nsec-1,Neset); % PREGUNTA -> Perquè Ts(end) != Tn(end)
 
 % Define stiffness matrix
-K = sparse(3*n,3*n);
-for i = 1:neset*nsec
-    I = zeros(2*3,1); % (nnodes_el*nDOFs, 1)
-    l = y_nodal(Tn(i,2)) - y_nodal(Tn(i,1));
-    for k = 1:3 % 3 DOFs
-        I(k,1) = 3*(Tn(i,1)-1)+k;
-        I(k+3,1) = 3*(Tn(i,2)-1)+k;
-    end
-    Kt = (GJ/l)*[ 1 0 0 -1 0 0;
-                  0 0 0  0 0 0;
-                  0 0 0  0 0 0;
-                 -1 0 0  1 0 0;
-                  0 0 0  0 0 0;
-                  0 0 0  0 0 0];
-    Kb = (EI/l^3)*[0  0    0   0   0   0   ;
-                   0  12  6*l  0  -12  6*l ; 
-                   0 6*l 4*l^2 0 -6*l 2*l^2;
-                   0  0    0   0   0   0   ;
-                   0 -12 -6*l  0   12  -6*l;
-                   0 6*l 2*l^2 0 -6*l 4*l^2];
-    K(I,I) = K(I,I) + Kt + Kb;
-end
+K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ);
+
 
 % Define mass matrix
-M = sparse(3*n,3*n);
-for i = 1:neset*nsec
-    I = zeros(2*3,1); % (nnodes_el*nDOFs, 1)
-    l = y_nodal(Tn(i,2)) - y_nodal(Tn(i,1));
-    for k = 1:3 % 3 DOFs
-        I(k,1) = 3*(Tn(i,1)-1)+k;
-        I(k+3,1) = 3*(Tn(i,2)-1)+k;
-    end
-    [rhoA] = compute_avg_density(material,naca_2dt,chord);
-    [x_cm] = compute_mass_center(material,rhoA,naca_2dt,chord);
-    [I_cm] = compute_inertia_mass_center(x_cm,material,naca_2dt,chord);
-
-    Mt = (I_cm*l/6)*[2 0 0 1 0 0;
-                    0 0 0 0 0 0;
-                    0 0 0 0 0 0;
-                    1 0 0 2 0 0;
-                    0 0 0 0 0 0;
-                    0 0 0 0 0 0];
-    Mb = (rhoA*l/420)*[0   0       0   0    0       0 ;
-                       0  156    22*l  0   54    -13*l;
-                       0  22*l  4*l^2  0  13*l  -3*l^2;
-                       0   0       0   0    0       0 ;
-                       0   54    13*l  0   156   -22*l;
-                       0 -13*l -3*l^2  0 -22*l   4*l^2];
-    d = x_cm - x_sc;
-    d_m = [ 1  0  0  0  0  0;
-         -d  1  0  0  0  0;
-          0  0  1  0  0  0;
-          0  0  0  1  0  0;
-          0  0  0 -d  1  0;
-          0  0  0  0  0  1];
-    M(I,I) = M(I,I) + d_m'*(Mt + Mb)*d;
-end
+M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc);
 
 
 %% 3. Aerodynamics modelling
-
-
 
 % Define the chord vector
 chord_y = ones(1,length(y_nodal))*chord;
@@ -140,8 +87,7 @@ chord_y = ones(1,length(y_nodal))*chord;
 %S = compute_element_surface(chord_y,y_nodal);
 S = compute_element_length(y_nodal);
 
-
-% Compute chord/4 point and the colocation point span wise location
+% Compute chord/4 point and the colocation point spanwise location
 ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);
 col_pos = compute_aero_point(y_nodal,chord_y,x_col);
 segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);
@@ -151,16 +97,26 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 
 %% 4. Aeroelastic linear coupling
 
-[I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,n,nel,Tn);
-I_fL = compute_I_fL(n,nel,x_sc-x_ac);
+% Compute the aerodynamic coupling matrices
+[I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
 
-u = zeros(3*n,1);
-u_dot = zeros(3*n,1);
-u_dotdot = zeros(3*n,1);
+% Compute the structural coupling matrix
+I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
 
-alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
-L = -U_inf^2*S\A_aero*alpha;
-F_nod = I_fL*L;
+% u = zeros(3*Nnod,1);
+% u_dot = zeros(3*Nnod,1);
+% u_dotdot = zeros(3*Nnod,1);
+% 
+% alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
+% L = -U_inf^2*S\A_aero*alpha;
+% F_nod = I_fL*L;
+
+%% Static case solution
+solve_static = false;
+if solve_static == true
+    solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf)
+end
+
 
 %% 5. Aeroelastic solver
 
@@ -178,8 +134,8 @@ for i = 1:length(Uinf_)
     S_aero = -U_inf^2*rho_inf*S;
 
     % Compute coupling matrices
-    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,n,nel,Tn);
-    I_fL = compute_I_fL(n,nel,x_sc-x_ac);
+    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
+    I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
 
     % Compute aero mass, stiffness and damping matrices
     M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;

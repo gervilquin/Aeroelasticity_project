@@ -1,6 +1,7 @@
 function [I_cm] = compute_inertia_mass_center(x_cm,material,naca_2dt,c)
     
     I_cm = 0;
+    
     % Leading edge
     [airfoil_points,x] = compute_symmetric_airfoil(naca_2dt,0,7.5,1000,c);
     integrand = airfoil_points.*(x-x_cm).^2;
