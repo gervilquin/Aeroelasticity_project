@@ -112,9 +112,9 @@ I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
 % F_nod = I_fL*L;
 
 %% Static case solution
-solve_static = false;
+solve_static = true;
 if solve_static == true
-    solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf)
+    solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,10)
 end
 
 

@@ -1,4 +1,4 @@
-function solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf)
+function solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA_deg)
 
     Up = [  0 1 1;
             0 1 2;
@@ -13,7 +13,7 @@ function solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_i
     If = setdiff(1:Ndof,Ip);
     
     % compute force
-    AoA = deg2rad(-10);
+    AoA = deg2rad(AoA_deg);
     u = AoA*ones(3*Nnod,1);
     u_dot = zeros(3*Nnod,1);
     u_dotdot = zeros(3*Nnod,1);
