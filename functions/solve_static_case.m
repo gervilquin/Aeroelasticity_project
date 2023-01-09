@@ -1,4 +1,4 @@
-function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA_deg,plot_bool)
+function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL,S,A_aero,K,U_inf,rho_inf,AoA_deg,plot_bool)
     
 %     Up = [  0 1 1;
 %             0 1 2;
@@ -16,16 +16,18 @@ function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,I
     Ndof = Nnod*3;
     % compute force
     AoA = deg2rad(AoA_deg);
-    u = AoA*ones(3*Nnod,1);
-    u_dot = zeros(3*Nnod,1);
-    u_dotdot = zeros(3*Nnod,1);
+%     u = AoA*ones(3*Nnod,1);
+%     u_dot = zeros(3*Nnod,1);
+%     u_dotdot = zeros(3*Nnod,1);
     
-    alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
-    L = -U_inf^2*S\A_aero*alpha;
+    %alpha = I_au_0*u(If) + I_au_1*u_dot(If)  + I_au_2*u_dotdot(If) ;
+    alpha = AoA*ones(length(If)/3,1);
+    S_aero = -U_inf^2*rho_inf*S;
+    L = S_aero*inv(A_aero)*alpha;
     F= I_fL*L;
     
     % solve
-    u_static(If) = K(If,If)\(F(If,1)-K(If,Ip)*u_static(Ip,1));
+    u_static(If) = K(If,If)\(F-K(If,Ip)*u_static(Ip,1));
     
     % plot
     twist = u_static(1:3:Ndof-2);

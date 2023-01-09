@@ -8,11 +8,12 @@ addpath('functions\')
 %% User inputs
 
     % Aerodynamic
-    U_inf = 100; %m/s
-    AoA = 5;
+    U_inf = 1; %m/s
+    AoA = 1;
+    rho_inf = 1;
 
     % Number of elements between ribs
-    Neset = 10;
+    Neset = 5;
 
     % To solve the static case
     solve_static = true;
@@ -97,9 +98,9 @@ chord_y = ones(1,length(y_nodal))*chord;
 S = compute_element_length(y_nodal);
 
 % Compute chord/4 point and the colocation point spanwise location
-ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);
-col_pos = compute_aero_point(y_nodal,chord_y,x_col);
-segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);
+ac_pos = compute_aero_point(y_nodal,chord_y,x_ac)*1e-3;
+col_pos = compute_aero_point(y_nodal,chord_y,x_col)*1e-3;
+segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y)*1e-3;
 
 % Compute Influence matrix
 A_aero = compute_A_matrix(col_pos,segment_coor);
@@ -110,7 +111,7 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
 
 % Compute the structural coupling matrix
-I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
+I_fL = compute_I_fL(Nnod,Nel,x_ac-x_sc);
 
 %% Boundary conditions
 
@@ -126,24 +127,42 @@ Up = [  0 1 1;
 Kf = K(If,If);
 Mf = M(If,If);
 
+I_au_0 = I_au_0(:,If);
+I_au_1 = I_au_1(:,If);
+I_au_2 = I_au_2(:,If);
+
+I_fL = I_fL(If,:);
+
 %% 5 Static case solution
 if solve_static == true
-    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA,true);
+    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL,S,A_aero,K,U_inf,rho_inf,AoA,true);
 end
 
 %% Compute divergence
-Uinf_ = linspace(0.1,150,100);
+Uinf_ = linspace(0.1,300,100);
 U_diverg = [];
-w_Uinf = [];
+w_tip_Uinf = [];
 
-for i=1:lenght(Uinf_)
+for i=1:length(Uinf_)
     U_inf = Uinf_(i);
 
+    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
+    I_au_0 = I_au_0(:,If);
+    I_au_1 = I_au_1(:,If);
+    I_au_2 = I_au_2(:,If);
+
     try 
-        [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA,false)
-
-
+        close all
+        [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL,S,A_aero,K,U_inf,rho_inf,AoA,true);
+        w_tip_Uinf(end+1) = w(end-1);
+        U_diverg(end+1) = U_inf;
+    catch
+        pass
+    end
 end
+
+figure()
+plot(U_diverg,w_tip_Uinf)
 
 
 %% 5. Aeroelastic solver
@@ -154,7 +173,7 @@ p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(K,M,100,'sm');
+[eig_vector, eig_value] = eigs(Kf,Mf,10,'sm');
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
@@ -165,7 +184,11 @@ for i = 1:length(Uinf_)
 
     % Compute coupling matrices
     [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
-    I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
+    %I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
+
+    I_au_0 = I_au_0(:,If);
+    I_au_1 = I_au_1(:,If);
+    I_au_2 = I_au_2(:,If);
 
     % Compute aero mass, stiffness and damping matrices
     M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;
@@ -173,9 +196,9 @@ for i = 1:length(Uinf_)
     K_a = I_fL*(S_aero*inv(A_aero))*I_au_0;
     
     % Compute efective matrices
-    Meff = M + M_a; 
+    Meff = Mf + M_a; 
     Ceff = C_a;
-    Keff = K + K_a;
+    Keff = Kf + K_a;
 
     % >> P method as a quadratic eigenvalue problem <<
     B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
