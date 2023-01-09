@@ -5,6 +5,19 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc, clear, close all
 addpath('functions\')
+%% User inputs
+
+    % Aerodynamic
+    U_inf = 100; %m/s
+    AoA = 5;
+
+    % Number of elements between ribs
+    Neset = 10;
+
+    % To solve the static case
+    solve_static = true;
+
+
 
 %% 1. Initialisation 
 
@@ -32,7 +45,6 @@ y_sections =       [0,       1,           0.0
 y_sections = y_sections(:,2:3);
 
 Nsec = length(y_sections(:,2))-1; % number of panels
-Neset = 10;%<<<<<<<<<< Input 
 
 Nel = Nsec*Neset; % total number of elements
 
@@ -43,9 +55,6 @@ x_col = 3/4;
 
 % Geometry
 chord = 100; %mm
-
-% Aerodynamic
-U_inf = 100; %m/s
 
 % Material properties >Previously computed<
 EI = 6500;
@@ -68,7 +77,7 @@ Nnod = length(y_nodal); % number
 
 % define the connectivity matrixs
 Tn = ConnectivityElements(Nnod-1);
-Ts = ConnectivitySubsets(Tn,Nsec-1,Neset); % PREGUNTA -> Perquè Ts(end) != Tn(end)
+Ts = ConnectivitySubsets(Tn,Nsec-1,Neset);
 
 % Define stiffness matrix
 K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ);
@@ -103,25 +112,44 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 % Compute the structural coupling matrix
 I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
 
-% u = zeros(3*Nnod,1);
-% u_dot = zeros(3*Nnod,1);
-% u_dotdot = zeros(3*Nnod,1);
-% 
-% alpha = I_au_0*u + I_au_1*u_dot + I_au_2*u_dotdot;
-% L = -U_inf^2*S\A_aero*alpha;
-% F_nod = I_fL*L;
+%% Boundary conditions
 
-%% Static case solution
-solve_static = false;
+% Fixed DOF
+Up = [  0 1 1;
+        0 1 2;
+        0 1 3];
+
+% Compute the indeces of the free fix DOF
+[Ip,If,u_static] = compute_boundary_conditions(Up,3*Nnod);
+
+% Split the matrices in free and fix
+Kf = K(If,If);
+Mf = M(If,If);
+
+%% 5 Static case solution
 if solve_static == true
-    solve_static_case(Nnod,y_nodal,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,10)
+    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA,true);
+end
+
+%% Compute divergence
+Uinf_ = linspace(0.1,150,100);
+U_diverg = [];
+w_Uinf = [];
+
+for i=1:lenght(Uinf_)
+    U_inf = Uinf_(i);
+
+    try 
+        [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_au_0,I_au_1,I_au_2,I_fL,S,A_aero,K,U_inf,AoA,false)
+
+
 end
 
 
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,10,100);
+Uinf_ = linspace(0.1,100,100);
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
 
