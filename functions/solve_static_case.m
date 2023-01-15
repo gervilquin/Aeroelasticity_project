@@ -26,10 +26,9 @@ function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,I
     L = S_aero*inv(A_aero)*alpha;
     F= I_fL*L;
 
-    % Theoretical lift
-    L_t = 2*pi*AoA*rho_inf*0.55*0.1*U_inf^2;
-    disp(['Computed with A matrix = ',num2str(sum(L))])
-    disp(['Theroetical lift       = ',num2str(L_t)])
+    
+
+
     
     % solve
     u_static(If) = K(If,If)\(F-K(If,Ip)*u_static(Ip,1));
@@ -43,14 +42,36 @@ function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,I
         figure()
         subplot(3,1,1)
         plot(y_nodal,rad2deg(twist))
-        ylabel("Twist","Interpreter","latex")
+        ylabel("Twist [deg]","Interpreter","latex")
+        title(strcat("U_{\infty} = ",num2str(U_inf)," m/s   AoA = ",num2str(AoA_deg)," deg"))
+        grid on
+        grid minor
         subplot(3,1,2)
         plot(y_nodal,u_vertical)
-        ylabel("U vertical","Interpreter","latex")
+        ylabel("U vertical [m]","Interpreter","latex")       
+        grid on
+        grid minor
         subplot(3,1,3)
         plot(y_nodal,flection)
         ylabel("Deflection","Interpreter","latex")
         xlabel("Y [mm]",'Interpreter','latex')
+        grid on
+        grid minor
+
+        % Theoretical lift
+        L_t = pi/(1+2*pi/((2*0.55)^2/(0.1*2*0.55)))*AoA*rho_inf*0.55*0.1*U_inf^2;
+        disp(['Computed with A matrix = ',num2str(sum(L))])
+        disp(['Theroetical lift       = ',num2str(L_t)])
+        disp(['Lift after I_fl = ',num2str(sum(F(2:3:end)))])
+        
+        figure()
+        hold on
+        plot(y_nodal(1:end-1),L)
+        plot(y_nodal(1:end-1),L_t/length(L)*ones(length(L)))
+        xlabel("Y [m]","Interpreter","latex")
+        ylabel("Lift [N/m]")
+        legend(["Numerical Lifting line","Theoretical lifting line"])
+        hold off
     end
 
 end

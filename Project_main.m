@@ -8,8 +8,8 @@ addpath('functions\')
 %% User inputs
 
     % Aerodynamic
-    U_inf = 50; %m/s
-    AoA = 5;
+    U_inf = 60; %m/s
+    AoA = 7;
     rho_inf = 1;
 
     % Number of elements between ribs
@@ -89,6 +89,17 @@ K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ);
 M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc);
 
 
+% plot matrices
+figure()
+title("K")
+x_surf = linspace(1,length(K),length(K));
+surf(x_surf,x_surf,K,'EdgeColor','none')
+
+figure()
+title("M")
+x_surf = linspace(1,length(M),length(M));
+surf(x_surf,x_surf,M,'EdgeColor','none')
+
 %% 3. Aerodynamics modelling
 
 % Define the chord vector
@@ -99,9 +110,9 @@ chord_y = ones(1,length(y_nodal))*chord;
 S = compute_element_length(y_nodal);
 
 % Compute chord/4 point and the colocation point spanwise location
-ac_pos = compute_aero_point(y_nodal,chord_y,x_ac)*1e-3;
-col_pos = compute_aero_point(y_nodal,chord_y,x_col)*1e-3;
-segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y)*1e-3;
+ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);%*1e-3;
+col_pos = compute_aero_point(y_nodal,chord_y,x_col);%*1e-3;
+segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);%*1e-3;
 
 % Compute Influence matrix
 A_aero = compute_A_matrix(col_pos,segment_coor);
@@ -112,7 +123,7 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
 
 % Compute the structural coupling matrix
-I_fL = compute_I_fL(Nnod,Nel,(x_ac-x_sc)*chord);
+I_fL = compute_I_fL(Nnod,Nel,-(x_ac-x_sc)*chord);
 
 %% Boundary conditions
 
@@ -152,39 +163,99 @@ if solve_static == true
 end
 
 %% Compute divergence
-% Uinf_ = linspace(0.1,300,100);
-% U_diverg = [];
-% w_tip_Uinf = [];
-% 
-% 
-% for i=1:length(Uinf_)
-%     U_inf = Uinf_(i);
-% 
-%     [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
-% 
-%     try 
-%         close all
-%         [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,false);
-%         w_tip_Uinf(end+1) = w(end-1);
-%         U_diverg(end+1) = U_inf;
-%     catch
-%        continue
-%     end
-% end
-% 
-% figure()
-% plot(U_diverg,w_tip_Uinf)
+Uinf_ = linspace(0.1,150,100);
+U_diverg = [0];
+w_tip_Uinf = [0];
+
+
+for i=1:length(Uinf_)
+    U_inf = Uinf_(i);
+
+    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
+
+ 
+    %close all
+    [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,false);
+    
+    if (w(end-1) - w_tip_Uinf(end) > 0)
+
+        w_tip_Uinf(end+1) = w(end-1);
+        U_diverg(end+1) = U_inf;
+    end
+
+end
+
+figure()
+hold on
+plot(U_diverg,w_tip_Uinf)
+xlabel("$U_{\infty}$","Interpreter","latex")
+ylabel("$w^{tip}$","Interpreter","latex")
+grid on
+grid minor
+legend([strcat("Divergence $U_{\infty}$ = ",string(U_diverg(end))," m/s")],'location','northwest',"Interpreter","latex")
+hold off
+
+%% Modal analysis
+
+% define the number of modes that want to be returned
+Nm = 6; %first 6 modes
+
+% Obtain the first eigenvectos and eigenvalues
+[V,D] = eigs(Kf,Mf,Nm,'sm');
+
+% Obtain the natural frequencies and the vibration modes
+Phi = zeros(Nnod*3,Nm); 
+w2 = zeros(1,Nm);
+
+for k =1:length(V(1,:))
+    Phi(If,k) = V(:,k)/sqrt(V(:,k)'*M(If,If)*V(:,k));
+    w2(k) = D(k,k);
+end
+
+% plot modes
+figure()
+
+subplot(3,1,1)
+hold on
+for i =1:Nm
+    plot(y_nodal,Phi(1:3:end,i),'DisplayName',string(round(w2(i),0)))
+end
+%legend()
+hold off
+ylabel("Twist","Interpreter","latex")
+subplot(3,1,2)
+hold on
+for i =1:Nm
+    plot(y_nodal,Phi(2:3:end,i),'DisplayName',string(round(w2(i),0)))
+end
+legend(Location='bestoutside')
+hold off
+ylabel("U vertical","Interpreter","latex")
+subplot(3,1,3)
+hold on
+for i =1:Nm
+    plot(y_nodal,Phi(3:3:end,i),'DisplayName',string(round(w2(i),0)))
+end
+%legend()
+hold off
+ylabel("Deflection","Interpreter","latex")
+xlabel("Y [mm]",'Interpreter','latex')
+
+
 
 
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,200,100);
+Uinf_ = linspace(0.1,200,2);
+%Uinf_ = [1];
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
+N_modes = 10;
+p_values_collect = zeros(length(Uinf_),N_modes);
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(K,M,10,'sm');
+[eig_vector, eig_value] = eigs(K,M,N_modes,'sm');
 eig_vector = eig_vector(If,:);
 
 
@@ -240,11 +311,12 @@ for i = 1:length(Uinf_)
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
         -1*eye(size(Keff_red)) zeros(size(Keff_red))];
 
-    [eig_vector_p_red, eig_value_p_red] = eigs(D,30,'lm');
+    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'lm');
 
-    1./diag(eig_value_p_red)
 
-    p_values_red(i) = max(imag(-1./diag(eig_value_p_red)));
+
+    p_values_red(i) = max(real(-1./diag(eig_value_p_red)));
+    p_values_collect(i,:) = -1./diag(eig_value_p_red);
 end
 
 
@@ -255,6 +327,13 @@ end
 % grid minor
 % ylabel("$max(Re(p_i))$",'Interpreter','latex')
 % xlabel("$U_{\infty}$",'Interpreter','latex')
+% hold off
+
+% figure()
+% hold on
+% for i = 1:length(Uinf_)
+%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+% end
 % hold off
 
 figure()
