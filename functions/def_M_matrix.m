@@ -1,7 +1,8 @@
 function M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc)
 
     % Initialize the mass matrix
-    M = sparse(3*Nnod,3*Nnod);
+    %M = sparse(3*Nnod,3*Nnod);
+    M = zeros(3*Nnod,3*Nnod);
 
     % Start loop for LE, TE and Aluminium plate
     for i = 1:Neset*Nsec
@@ -63,9 +64,9 @@ function M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,
         Icm_r= compute_rib_Icm(rho_r,xcm_r,naca_2dt,chord);
         Ix_r = compute_rib_Ix(rho_r,naca_2dt,chord);
 
-        Mr = h_r*[Icm_r+rho_r*A_r*(xcm_r-x_sc) -rho_r*A_r*(xcm_r-x_sc) 0;
-                    -rho_r*A_r*(xcm_r-x_sc) rho_r*A_r 0;
-                    0 0 Ix_r];
+        Mr = h_r*[Icm_r+rho_r*A_r*(xcm_r-x_sc),     -rho_r*A_r*(xcm_r-x_sc),    0;
+                  -rho_r*A_r*(xcm_r-x_sc)           rho_r*A_r                   0;
+                    0                               0                           Ix_r];
 
         M(I,I) = M(I,I) + Mr;
     end

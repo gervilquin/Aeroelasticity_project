@@ -86,7 +86,7 @@ K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ);
 
 
 % Define mass matrix
-M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc);
+M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc*chord);
 
 
 % plot matrices
@@ -94,13 +94,13 @@ figure()
 title("K")
 x_surf = linspace(1,length(K),length(K));
 surf(x_surf,x_surf,K,'EdgeColor','none')
-set(gca,'zscale','log')
+%set(gca,'zscale','log')
 
 figure()
 title("M")
 x_surf = linspace(1,length(M),length(M));
 surf(x_surf,x_surf,M,'EdgeColor','none')
-set(gca,'zscale','log')
+%set(gca,'zscale','log')
 
 %% 3. Aerodynamics modelling
 
@@ -203,7 +203,7 @@ hold off
 Nm = 6; %first 6 modes
 
 % Obtain the first eigenvectos and eigenvalues
-[V,D] = eigs(Kf,Mf,Nm,'sr');
+[V,D] = eigs(Kf,Mf,Nm,'sm');
 
 % Obtain the natural frequencies and the vibration modes
 Phi = zeros(Nnod*3,Nm); 
@@ -249,7 +249,7 @@ xlabel("Y [mm]",'Interpreter','latex')
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,U_diverg(end),3);
+Uinf_ = linspace(0.1,U_diverg(end),100);
 %Uinf_ = [1];
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
@@ -313,11 +313,10 @@ for i = 1:length(Uinf_)
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
         -1*eye(size(Keff_red)) zeros(size(Keff_red))];
 
-    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'sm');
+    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'lm');
+    p_values_red(i) = max(real(1./diag(eig_value_p_red)));
 
-
-
-    p_values_red(i) = max(real(-1./diag(eig_value_p_red)));
+    %p_values_red(i) = min(real(-1./diag(eig_value_p_red)));
     p_values_collect(i,:) = -1./diag(eig_value_p_red);
 end
 
@@ -331,12 +330,12 @@ end
 % xlabel("$U_{\infty}$",'Interpreter','latex')
 % hold off
 
-figure()
-hold on
-for i = 1:length(Uinf_)
-    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-end
-hold off
+% figure()
+% hold on
+% for i = 1:length(Uinf_)
+%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+% end
+% hold off
 
 figure()
 plot(Uinf_,p_values_red)
