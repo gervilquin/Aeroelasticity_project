@@ -71,5 +71,16 @@ function M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,
         M(I,I) = M(I,I) + Mr;
     end
     
+disp("Slender Beam:")
+disp(["rhoA",num2str(rhoA)])
+disp(["x_cm",num2str(x_cm)])
+disp(["I_cm",num2str(I_cm)])
+ 
+disp("Rib")
+disp(["rhoA",num2str(rho_r*A_r)])
+disp(["xcm_r",num2str(xcm_r)])
+disp(["Icm_r",num2str(Icm_r)])
+disp(["Ix_r",num2str(Ix_r)])
+
 
 end

@@ -200,7 +200,7 @@ hold off
 %% Modal analysis
 
 % define the number of modes that want to be returned
-Nm = 6; %first 6 modes
+Nm = 4; %first 6 modes
 
 % Obtain the first eigenvectos and eigenvalues
 [V,D] = eigs(Kf,Mf,Nm,'sm');
@@ -249,7 +249,8 @@ xlabel("Y [mm]",'Interpreter','latex')
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,U_diverg(end),100);
+Uinf_ = linspace(0.1,0.2*U_diverg(end),100);
+
 %Uinf_ = [1];
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
@@ -257,8 +258,8 @@ N_modes = 30;
 p_values_collect = zeros(length(Uinf_),N_modes);
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(K,M,N_modes,'sm');
-eig_vector = eig_vector(If,:);
+[eig_vector, eig_value] = eigs(Kf,Mf,N_modes,'sm');
+%eig_vector = eig_vector(If,:);
 
 
 for i = 1:length(Uinf_)
@@ -330,12 +331,12 @@ end
 % xlabel("$U_{\infty}$",'Interpreter','latex')
 % hold off
 
-figure()
-hold on
-for i = 1:length(Uinf_)
-    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-end
-hold off
+% figure()
+% hold on
+% for i = 1:length(Uinf_)
+%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+% end
+% hold off
 
 figure()
 plot(Uinf_,p_values_red)
@@ -344,6 +345,8 @@ grid minor
 ylabel("$max(Re(p_i))$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
 hold off
+
+    
 
 
 
