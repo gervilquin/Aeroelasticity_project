@@ -248,13 +248,12 @@ xlabel("Y [mm]",'Interpreter','latex')
 
 %% 5. Aeroelastic solver
 
-%Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,0.2*U_diverg(end),100);
+Uinf_ = linspace(0.1,0.2*U_diverg(end),200);
 
 %Uinf_ = [1];
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
-N_modes = 30;
+N_modes = 6;
 p_values_collect = zeros(length(Uinf_),N_modes);
 
 % Get the eigenvalues of M and K
@@ -315,9 +314,9 @@ for i = 1:length(Uinf_)
         -1*eye(size(Keff_red)) zeros(size(Keff_red))];
 
     [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'lm');
-    p_values_red(i) = max(real(1./diag(eig_value_p_red)));
+    %p_values_red(i) = max(real(1./diag(eig_value_p_red)));
 
-    %p_values_red(i) = min(real(-1./diag(eig_value_p_red)));
+    p_values_red(i) = max(real(1./diag(eig_value_p_red)));
     p_values_collect(i,:) = -1./diag(eig_value_p_red);
 end
 
@@ -331,12 +330,12 @@ end
 % xlabel("$U_{\infty}$",'Interpreter','latex')
 % hold off
 
-% figure()
-% hold on
-% for i = 1:length(Uinf_)
-%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-% end
-% hold off
+figure()
+hold on
+for i = 1:length(Uinf_)
+    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+end
+hold off
 
 figure()
 plot(Uinf_,p_values_red)
