@@ -64,7 +64,7 @@ function M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,
         Icm_r= compute_rib_Icm(rho_r,xcm_r,naca_2dt,chord);
         Ix_r = compute_rib_Ix(rho_r,naca_2dt,chord);
 
-        Mr = h_r*[Icm_r+rho_r*A_r*(xcm_r-x_sc),     -rho_r*A_r*(xcm_r-x_sc),    0;
+        Mr = h_r*[Icm_r+rho_r*A_r*(xcm_r-x_sc)^2,     -rho_r*A_r*(xcm_r-x_sc),    0;
                   -rho_r*A_r*(xcm_r-x_sc)           rho_r*A_r                   0;
                     0                               0                           Ix_r];
 

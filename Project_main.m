@@ -228,7 +228,7 @@ ylabel("Twist","Interpreter","latex")
 subplot(3,1,2)
 hold on
 for i =1:Nm
-    plot(y_nodal,Phi(2:3:end,i),'DisplayName',string(round(w2(i),0)))
+    plot(y_nodal,Phi(2:3:end,i),'DisplayName',string(round(sqrt(w2(i))/2/pi,0)))
 end
 legend(Location='bestoutside')
 hold off
@@ -330,12 +330,12 @@ end
 % xlabel("$U_{\infty}$",'Interpreter','latex')
 % hold off
 
-% figure()
-% hold on
-% for i = 1:length(Uinf_)
-%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-% end
-% hold off
+figure()
+hold on
+for i = 1:length(Uinf_)
+    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+end
+hold off
 
 figure()
 plot(Uinf_,p_values_red)
