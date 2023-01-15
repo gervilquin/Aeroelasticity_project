@@ -25,6 +25,11 @@ function [twist,u_vertical,flection] = solve_static_case(Nnod,y_nodal,u_static,I
     S_aero = -U_inf^2*rho_inf*S;
     L = S_aero*inv(A_aero)*alpha;
     F= I_fL*L;
+
+    % Theoretical lift
+    L_t = 2*pi*AoA*rho_inf*0.55*0.1*U_inf^2;
+    disp(['Computed with A matrix = ',num2str(sum(L))])
+    disp(['Theroetical lift       = ',num2str(L_t)])
     
     % solve
     u_static(If) = K(If,If)\(F-K(If,Ip)*u_static(Ip,1));

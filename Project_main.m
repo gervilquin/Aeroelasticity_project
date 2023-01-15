@@ -8,8 +8,8 @@ addpath('functions\')
 %% User inputs
 
     % Aerodynamic
-    U_inf = 1; %m/s
-    AoA = 1;
+    U_inf = 50; %m/s
+    AoA = 5;
     rho_inf = 1;
 
     % Number of elements between ribs
@@ -44,6 +44,7 @@ y_sections =       [0,       1,           0.0
                     0,       18,          550.0 ];
 
 y_sections = y_sections(:,2:3);
+y_sections(:,2) = y_sections(:,2)*1e-3; % Coordiantes in meters
 
 Nsec = length(y_sections(:,2))-1; % number of panels
 
@@ -55,20 +56,20 @@ x_ac = 1/4;
 x_col = 3/4;
 
 % Geometry
-chord = 100; %mm
+chord = 100*1e-3; %m
 
 % Material properties >Previously computed<
-EI = 6500;
-GJ = 5500;
+EI = 5.04517;%6500*1e-3;
+GJ = 6.5977;%5500*1e-3;
 
 %% 2. Structural modelling
 
 % Material properties
 material.Al.rho = 2795;
-material.Al.E = 71000;
+material.Al.E = 71000*1e6;
 material.Al.v = 0.33;
 material.Nylon.rho = 930;
-material.Nylon.E = 1700;
+material.Nylon.E = 1700*1e6;
 material.Nylon.v = 0.394;
 naca_2dt = 18;
 
@@ -111,7 +112,7 @@ A_aero = compute_A_matrix(col_pos,segment_coor);
 [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
 
 % Compute the structural coupling matrix
-I_fL = compute_I_fL(Nnod,Nel,x_ac-x_sc);
+I_fL = compute_I_fL(Nnod,Nel,(x_ac-x_sc)*chord);
 
 %% Boundary conditions
 
@@ -127,86 +128,104 @@ Up = [  0 1 1;
 Kf = K(If,If);
 Mf = M(If,If);
 
-I_au_0 = I_au_0(:,If);
-I_au_1 = I_au_1(:,If);
-I_au_2 = I_au_2(:,If);
+I_au_0_f = I_au_0(:,If);
+I_au_1_f = I_au_1(:,If);
+I_au_2_f = I_au_2(:,If);
 
-I_fL = I_fL(If,:);
+I_fL_f = I_fL(If,:);
+
+% Collect all parameters in a list
+Parameters_list.S = S;
+Parameters_list.rho = rho_inf;
+Parameters_list.Nnod = Nnod;
+Parameters_list.Nel = Nel;
+Parameters_list.Tn = Tn;
+Parameters_list.If = If;
+Parameters_list.I_fl = I_fL;
+Parameters_list.A_aero = A_aero;
 
 %% 5 Static case solution
 if solve_static == true
-    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL,S,A_aero,K,U_inf,rho_inf,AoA,true);
+    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
+    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,true);
+    %solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,K,U_inf,rho_inf,AoA,true);
 end
 
 %% Compute divergence
-Uinf_ = linspace(0.1,300,100);
-U_diverg = [];
-w_tip_Uinf = [];
-
-for i=1:length(Uinf_)
-    U_inf = Uinf_(i);
-
-    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
-    I_au_0 = I_au_0(:,If);
-    I_au_1 = I_au_1(:,If);
-    I_au_2 = I_au_2(:,If);
-
-    try 
-        close all
-        [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL,S,A_aero,K,U_inf,rho_inf,AoA,true);
-        w_tip_Uinf(end+1) = w(end-1);
-        U_diverg(end+1) = U_inf;
-    catch
-        pass
-    end
-end
-
-figure()
-plot(U_diverg,w_tip_Uinf)
+% Uinf_ = linspace(0.1,300,100);
+% U_diverg = [];
+% w_tip_Uinf = [];
+% 
+% 
+% for i=1:length(Uinf_)
+%     U_inf = Uinf_(i);
+% 
+%     [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
+% 
+%     try 
+%         close all
+%         [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,false);
+%         w_tip_Uinf(end+1) = w(end-1);
+%         U_diverg(end+1) = U_inf;
+%     catch
+%        continue
+%     end
+% end
+% 
+% figure()
+% plot(U_diverg,w_tip_Uinf)
 
 
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,100,100);
+Uinf_ = linspace(0.1,200,100);
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(Kf,Mf,10,'sm');
+[eig_vector, eig_value] = eigs(K,M,10,'sm');
+eig_vector = eig_vector(If,:);
+
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
     rho_inf = 1;
 
-    % Compute Aerodynamic matrices
-    S_aero = -U_inf^2*rho_inf*S;
+%     % Compute Aerodynamic matrices
+%     S_aero = -U_inf^2*rho_inf*S;
+% 
+%     % Compute coupling matrices
+%     [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
+%     %I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
+% 
+%     I_au_0 = I_au_0(:,If);
+%     I_au_1 = I_au_1(:,If);
+%     I_au_2 = I_au_2(:,If);
+% 
+%     % Compute aero mass, stiffness and damping matrices
+%     M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;
+%     C_a = I_fL*(S_aero*inv(A_aero))*I_au_1;
+%     K_a = I_fL*(S_aero*inv(A_aero))*I_au_0;
+%     
+%     % Compute efective matrices
+%     Meff = Mf + M_a; 
+%     Ceff = C_a;
+%     Keff = Kf + K_a;
 
-    % Compute coupling matrices
-    [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
-    %I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
+    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
 
-    I_au_0 = I_au_0(:,If);
-    I_au_1 = I_au_1(:,If);
-    I_au_2 = I_au_2(:,If);
+    Meff = Meff(If,If);
+    Ceff = Ceff(If,If);
+    Keff = Keff(If,If);
 
-    % Compute aero mass, stiffness and damping matrices
-    M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;
-    C_a = I_fL*(S_aero*inv(A_aero))*I_au_1;
-    K_a = I_fL*(S_aero*inv(A_aero))*I_au_0;
-    
-    % Compute efective matrices
-    Meff = Mf + M_a; 
-    Ceff = C_a;
-    Keff = Kf + K_a;
-
-    % >> P method as a quadratic eigenvalue problem <<
-    B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
-    A = [Keff zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
-
-    [eig_vector_p, eig_value_p] = eigs(A,B,30,'sm');
-
-    p_values(i) = max(real(-1./diag(eig_value_p)));
+%     % >> P method as a quadratic eigenvalue problem <<
+%     B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
+%     A = [Keff zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
+% 
+%     [eig_vector_p, eig_value_p] = eigs(A,B,30,'sm');
+% 
+%     p_values(i) = max(real(-1./diag(eig_value_p)));
 
     % >> reduced set
     Meff_red = eig_vector'*Meff*eig_vector;
@@ -221,20 +240,22 @@ for i = 1:length(Uinf_)
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
         -1*eye(size(Keff_red)) zeros(size(Keff_red))];
 
-    [eig_vector_p_red, eig_value_p_red] = eigs(D,30,'sm');
+    [eig_vector_p_red, eig_value_p_red] = eigs(D,30,'lm');
 
-    p_values_red(i) = max(real(-1./diag(eig_value_p_red)));
+    1./diag(eig_value_p_red)
+
+    p_values_red(i) = max(imag(-1./diag(eig_value_p_red)));
 end
 
 
 %% Plots
-figure()
-plot(Uinf_,p_values)
-grid on
-grid minor
-ylabel("$max(Re(p_i))$",'Interpreter','latex')
-xlabel("$U_{\infty}$",'Interpreter','latex')
-hold off
+% figure()
+% plot(Uinf_,p_values)
+% grid on
+% grid minor
+% ylabel("$max(Re(p_i))$",'Interpreter','latex')
+% xlabel("$U_{\infty}$",'Interpreter','latex')
+% hold off
 
 figure()
 plot(Uinf_,p_values_red)

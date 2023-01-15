@@ -47,7 +47,7 @@ function M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,
 
     % Ribs
     Nribs = length(Ts(:,1));
-    h_r = 4; %mm thickness of the ribs
+    h_r = 0.004; %mm thickness of the ribs
     rho_r = material.Nylon.rho;
 
     % Start loop for ribs
