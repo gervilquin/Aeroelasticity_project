@@ -94,11 +94,13 @@ figure()
 title("K")
 x_surf = linspace(1,length(K),length(K));
 surf(x_surf,x_surf,K,'EdgeColor','none')
+set(gca,'zscale','log')
 
 figure()
 title("M")
 x_surf = linspace(1,length(M),length(M));
 surf(x_surf,x_surf,M,'EdgeColor','none')
+set(gca,'zscale','log')
 
 %% 3. Aerodynamics modelling
 
@@ -201,7 +203,7 @@ hold off
 Nm = 6; %first 6 modes
 
 % Obtain the first eigenvectos and eigenvalues
-[V,D] = eigs(Kf,Mf,Nm,'sm');
+[V,D] = eigs(Kf,Mf,Nm,'sr');
 
 % Obtain the natural frequencies and the vibration modes
 Phi = zeros(Nnod*3,Nm); 
@@ -247,11 +249,11 @@ xlabel("Y [mm]",'Interpreter','latex')
 %% 5. Aeroelastic solver
 
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,200,2);
+Uinf_ = linspace(0.1,U_diverg(end),3);
 %Uinf_ = [1];
 p_values = zeros(length(Uinf_),1);
 p_values_red = zeros(length(Uinf_),1);
-N_modes = 10;
+N_modes = 30;
 p_values_collect = zeros(length(Uinf_),N_modes);
 
 % Get the eigenvalues of M and K
@@ -311,7 +313,7 @@ for i = 1:length(Uinf_)
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
         -1*eye(size(Keff_red)) zeros(size(Keff_red))];
 
-    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'lm');
+    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'sm');
 
 
 
@@ -329,12 +331,12 @@ end
 % xlabel("$U_{\infty}$",'Interpreter','latex')
 % hold off
 
-% figure()
-% hold on
-% for i = 1:length(Uinf_)
-%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-% end
-% hold off
+figure()
+hold on
+for i = 1:length(Uinf_)
+    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+end
+hold off
 
 figure()
 plot(Uinf_,p_values_red)

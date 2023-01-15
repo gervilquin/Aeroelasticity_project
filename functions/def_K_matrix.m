@@ -1,7 +1,8 @@
 function K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ)
 
     % Define a sparse K matrix
-    K = sparse(3*Nnod,3*Nnod);
+    %K = sparse(3*Nnod,3*Nnod);
+    K = zeros(3*Nnod,3*Nnod);
 
     % Start the loop to fill the matrix
     for i = 1:Neset*Nsec
