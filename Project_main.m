@@ -4,7 +4,7 @@
 % Date: 18/11/2022
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc, clear, close all
-addpath('functions\')
+addpath(genpath('functions'))
 
 %% 1. Data input
 % Geometrical data
@@ -38,8 +38,8 @@ U_inf = 60;  % Freestream velocity (m/s)
 AoA = 10;     % Wing angle of attack (º)
 rho_inf = 1; % Reference air density (kg/m^3)
 
-%% 2. Structural modelling
-% Structural mesh definition
+%% 2. Mesh construction
+% Mesh definition
 y_el = ComputeYcoordinates(y_sec,Nsec,Nesec);  % Elements' nodes Y coordinate (m)
 Nnodes = length(y_el);
 Nel = Nnodes - 1;
@@ -48,66 +48,46 @@ Nel = Nnodes - 1;
 Tn = ConnectivityElements(Nel);
 Ts = ConnectivitySubsets(Tn,Nsec,Nesec);
 
+% Dirichlet boundary conditions
+Up = [  0 1 1;
+        0 1 2;
+        0 1 3];
+
+%% 3. Structural modelling
 % Define stiffness matrix
 K = ComputeKmatrix(y_el,Tn,EI,GJ);
 % Define mass matrix
 M = ComputeMmatrix(y_el,Tn,Ts,material,t,c,x_sc,RibExist);
 
-% % plot matrices
-% figure()
-% title("K")
-% x_surf = linspace(1,length(K),length(K));
-% surf(x_surf,x_surf,K,'EdgeColor','none')
-% set(gca,'zscale','log')
-% 
-% figure()
-% title("M")
-% x_surf = linspace(1,length(M),length(M));
-% surf(x_surf,x_surf,M,'EdgeColor','none')
-% set(gca,'zscale','log')
-
-%% 3. Aerodynamics modelling
+%% 4. Aerodynamics modelling
 % Compute aerodynamic center's and colocation's points 
-ac_pos =  x_ac*c;
 col_pos = ComputePointCoordinatesAerodynamics(y_el,c,x_col);
-vortex_coord = ComputeVortexLinesNodes(y_el,ac_pos,c);
+vortex_coord = ComputeVortexLinesNodes(y_el,x_ac,c);
 
 % Compute Influence matrix
 A = ComputeAmatrix(col_pos,vortex_coord);
 % Compute element's size matrix
 S = ComputeElementSize(y_el);
 
-%% 4. Aeroelastic linear coupling
+%% 5. Aeroelastic linear coupling
 % Compute the aerodynamic coupling matrices
 [I_au_1, I_au_2, I_au_3] = ComputeDisplacementsCoupling(y_el,Tn,U_inf);
 % Compute the structural coupling matrix
 e = (x_ac - x_sc)*c;
 I_fL = ComputeForcesCoupling(y_el,Tn,e);
 
-%% Boundary conditions
-% Fixed DOF
-Up = [  0 1 1;
-        0 1 2;
-        0 1 3];
-
+%% 6. Static case solver
 % Compute the indeces of the free fix DOF
 [Ip,If,u_static] = ComputeBoundaryConditions(Up,3*Nnodes);
+% Compute force vector
+[F,L] = ComputeFvector(Nel,U_inf,rho_inf,AoA,S,A,I_fL);
 
-% % Split the matrices in free and fix %%%% TO DO JUST BEFORE EIGS? %%%%
-% Kf = K(If,If);
-% Mf = M(If,If);
-% I_au_1_f = I_au_1(:,If);
-% I_au_2_f = I_au_2(:,If);
-% I_au_3_f = I_au_3(:,If);
-% I_fL_f = I_fL(If,:);
-
-%% 5 Static case solution
 if solve_static == true
-    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
-    StaticSolver(y_el,u_static,If,Ip,I_fL,S,A,Keff,U_inf,rho_inf,AoA,true);
+    [u] = StaticSolver(K,F,u_static,If,Ip);
+    plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA,true)
 end
 
-%% Compute divergence
+%% 7. Divergence solver
 Uinf_ = linspace(0.1,150,100);
 U_diverg = [0];
 w_tip_Uinf = [0];
@@ -116,7 +96,7 @@ w_tip_Uinf = [0];
 for i=1:length(Uinf_)
     U_inf = Uinf_(i);
 
-    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
+    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(M,K,U_inf,Parameters_list);
 
  
     %close all
