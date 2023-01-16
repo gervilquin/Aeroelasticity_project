@@ -6,6 +6,12 @@
 clc, clear, close all
 addpath(genpath('functions'))
 
+% Case solution active/deactivate
+solve_static = false; 
+solve_diverge = false;
+solve_modal = true;
+solve_flutter = true;
+
 %% 1. Data input
 % Geometrical data
 c = 0.1; % chord of the wing (m)
@@ -28,15 +34,15 @@ material.Nylon.v = 0.394;     % Nylon Poisson coefficient (-)
 x_sc = 0.43;           % Position of shear center (%chord)
 EI = 5.04517;%6500*1e-3; % Mean value of flexural rigidity (N·m^2)
 GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
-solve_static = true;   % Logical input to active/deactivate static solver
+
 
 % Aerodynamic properties
 x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
 U_inf = 60;  % Freestream velocity (m/s)
-AoA = 10;     % Wing angle of attack (º)
-rho_inf = 1; % Reference air density (kg/m^3)
+AoA = 1;     % Wing angle of attack (º)
+rho_inf = 1.3; % Reference air density (kg/m^3)
 
 %% 2. Mesh construction
 % Mesh definition
@@ -57,7 +63,7 @@ Up = [  0 1 1;
 % Define stiffness matrix
 K = ComputeKmatrix(y_el,Tn,EI,GJ);
 % Define mass matrix
-M = ComputeMmatrix(y_el,Tn,Ts,material,t,c,x_sc,RibExist);
+M = ComputeMmatrix(y_el,Tn,Ts,material,t,c,x_sc*c,RibExist);
 
 %% 4. Aerodynamics modelling
 % Compute aerodynamic center's and colocation's points 
@@ -71,7 +77,7 @@ S = ComputeElementSize(y_el);
 
 %% 5. Aeroelastic linear coupling
 % Compute the aerodynamic coupling matrices
-[I_au_1, I_au_2, I_au_3] = ComputeDisplacementsCoupling(y_el,Tn,U_inf);
+[I_au_0, I_au_1, I_au_2] = ComputeDisplacementsCoupling(y_el,Tn,U_inf);
 % Compute the structural coupling matrix
 e = (x_ac - x_sc)*c;
 I_fL = ComputeForcesCoupling(y_el,Tn,e);
@@ -87,187 +93,182 @@ if solve_static == true
     plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA,true)
 end
 
-%% 7. Divergence solver
-Uinf_ = linspace(0.1,150,100);
-U_diverg = [0];
-w_tip_Uinf = [0];
 
-
-for i=1:length(Uinf_)
-    U_inf = Uinf_(i);
-
-    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(M,K,U_inf,Parameters_list);
-
- 
-    %close all
-    [theta,w,gamma] = solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,false);
-    
-    if (w(end-1) - w_tip_Uinf(end) > 0)
-
-        w_tip_Uinf(end+1) = w(end-1);
-        U_diverg(end+1) = U_inf;
-    end
-
+%% 7. Static solution with aerocoupling
+if solve_static == true
+    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
+    AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,true);
 end
 
-figure()
-hold on
-plot(U_diverg,w_tip_Uinf)
-xlabel("$U_{\infty}$","Interpreter","latex")
-ylabel("$w^{tip}$","Interpreter","latex")
-grid on
-grid minor
-legend([strcat("Divergence $U_{\infty}$ = ",string(U_diverg(end))," m/s")],'location','northwest',"Interpreter","latex")
-hold off
+%% 8. Compute divergence
+if solve_diverge == true
+    Uinf_ = linspace(0.1,150,100);
+    U_diverg = [0];
+    w_tip_Uinf = [0];
+    
+    
+    for i=1:length(Uinf_)
+        U_inf = Uinf_(i);
+    
+        [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
+    
+        [theta,w,gamma] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,false);
+        
+        if (w(end-1) - w_tip_Uinf(end) > 0)
+            w_tip_Uinf(end+1) = w(end-1);
+            U_diverg(end+1) = U_inf;
+        end
+    
+    end
+    
+    figure()
+    hold on
+    plot(U_diverg,w_tip_Uinf)
+    xlabel("$U_{\infty}$","Interpreter","latex")
+    ylabel("$w^{tip}$","Interpreter","latex")
+    grid on
+    grid minor
+    legend([strcat("Divergence $U_{\infty}$ = ",string(U_diverg(end))," m/s")],'location','northwest',"Interpreter","latex")
+    hold off
+end
 
 %% Modal analysis
+if solve_modal == true
+    % define the number of modes that want to be returned
+    Nm = 6; %first 6 modes
+    
+    % Obtain the first eigenvectos and eigenvalues
+    [V,D] = eigs(K(If,If),M(If,If),Nm,'sm');
+    
+    % Obtain the natural frequencies and the vibration modes
+    Phi = zeros(Nnodes*3,Nm); 
+    w2 = zeros(1,Nm);
+    freq = zeros(1,Nm); 
+    
+    for k =1:length(V(1,:))
+        Phi(If,k) = V(:,k)/sqrt(V(:,k)'*M(If,If)*V(:,k));
+        w2(k) = D(k,k);
+        freq(k) = sqrt(w2(k))/2/pi;
+    end
+    
+    % plot modes
+    figure()
+    tcl = tiledlayout(3,1);
+    
+    % Plot mode shpaes in the twist
+    nexttile(tcl)
+    hold on
+    for i =1:Nm
+        plot(y_el,Phi(1:3:end,i))
+    end
+    
+    grid on
+    grid minor
+    hold off
+    ylabel("Twist","Interpreter","latex")
+    
+    
+    %Plot mode shapes in the vertical displacement 
+    nexttile(tcl)
+    hold on
+    for i =1:Nm
+        plot(y_el,Phi(2:3:end,i))
+    end
+    grid on
+    grid minor
+    hold off
+    ylabel("U vertical","Interpreter","latex")
 
-% define the number of modes that want to be returned
-Nm = 6; %first 6 modes
+    %Plot the mode shapes in deflection
+    nexttile(tcl)
+    hold on
+    for i =1:Nm
+        plot(y_el,Phi(3:3:end,i),'DisplayName',strcat("Mode ",string(i),": ",string(round(freq(i),0))," Hz"))
+    end
+    grid on
+    grid minor
+    hold off
+    ylabel("Deflection","Interpreter","latex")
+    xlabel("Y [mm]",'Interpreter','latex')
 
-% Obtain the first eigenvectos and eigenvalues
-[V,D] = eigs(Kf,Mf,Nm,'sr');
+    % Add legend to the side
+    Lgnd = legend('show');
+    Lgnd.Layout.Tile = 'East';
 
-% Obtain the natural frequencies and the vibration modes
-Phi = zeros(Nnod*3,Nm); 
-w2 = zeros(1,Nm);
-
-for k =1:length(V(1,:))
-    Phi(If,k) = V(:,k)/sqrt(V(:,k)'*M(If,If)*V(:,k));
-    w2(k) = D(k,k);
 end
 
-% plot modes
-figure()
-
-subplot(3,1,1)
-hold on
-for i =1:Nm
-    plot(y_nodal,Phi(1:3:end,i),'DisplayName',string(round(w2(i),0)))
-end
-%legend()
-hold off
-ylabel("Twist","Interpreter","latex")
-subplot(3,1,2)
-hold on
-for i =1:Nm
-    plot(y_nodal,Phi(2:3:end,i),'DisplayName',string(round(w2(i),0)))
-end
-legend(Location='bestoutside')
-hold off
-ylabel("U vertical","Interpreter","latex")
-subplot(3,1,3)
-hold on
-for i =1:Nm
-    plot(y_nodal,Phi(3:3:end,i),'DisplayName',string(round(w2(i),0)))
-end
-%legend()
-hold off
-ylabel("Deflection","Interpreter","latex")
-xlabel("Y [mm]",'Interpreter','latex')
 
 
-
-
-%% 5. Aeroelastic solver
-
+%% 5. Flutter solver
+if solve_flutter == true
 %Uinf_ = logspace(-10,-1,100);
-Uinf_ = linspace(0.1,U_diverg(end),3);
-%Uinf_ = [1];
-p_values = zeros(length(Uinf_),1);
-p_values_red = zeros(length(Uinf_),1);
-N_modes = 30;
-p_values_collect = zeros(length(Uinf_),N_modes);
+%Uinf_ = linspace(0.1,U_diverg(end),3);
+Uinf_ = linspace(20,60,100);
+%Uinf_ = [20];
 
 % Get the eigenvalues of M and K
-[eig_vector, eig_value] = eigs(K,M,N_modes,'sm');
-eig_vector = eig_vector(If,:);
+N_reduced = 3;
+N_modes = 30;
+[Vr, Dr] = eigs(K(If,If),M(If,If),N_reduced,'sm');
 
+% Initialize matrices
+p_values = zeros(length(Uinf_),1);
+p_values_collect = zeros(length(Uinf_),2*N_reduced);
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
-    rho_inf = 1;
 
-%     % Compute Aerodynamic matrices
-%     S_aero = -U_inf^2*rho_inf*S;
-% 
-%     % Compute coupling matrices
-%     [I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
-%     %I_fL = compute_I_fL(Nnod,Nel,x_sc-x_ac);
-% 
-%     I_au_0 = I_au_0(:,If);
-%     I_au_1 = I_au_1(:,If);
-%     I_au_2 = I_au_2(:,If);
-% 
-%     % Compute aero mass, stiffness and damping matrices
-%     M_a = I_fL*(S_aero*inv(A_aero))*I_au_2;
-%     C_a = I_fL*(S_aero*inv(A_aero))*I_au_1;
-%     K_a = I_fL*(S_aero*inv(A_aero))*I_au_0;
-%     
-%     % Compute efective matrices
-%     Meff = Mf + M_a; 
-%     Ceff = C_a;
-%     Keff = Kf + K_a;
+    % Compute efective matrix
+    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
 
-    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
-
+    % Select the Free DOFs
     Meff = Meff(If,If);
     Ceff = Ceff(If,If);
     Keff = Keff(If,If);
 
-%     % >> P method as a quadratic eigenvalue problem <<
-%     B = [Ceff Meff; -1*eye(size(Keff)) zeros(size(Keff))];
-%     A = [Keff zeros(size(Keff)); zeros(size(Keff)) eye(size(Keff))];
-% 
-%     [eig_vector_p, eig_value_p] = eigs(A,B,30,'sm');
-% 
-%     p_values(i) = max(real(-1./diag(eig_value_p)));
+    % Order reduction
+    Meff_red = Vr'*Meff*Vr;
+    Ceff_red = Vr'*Ceff*Vr;
+    Keff_red = Vr'*Keff*Vr;
 
-    % >> reduced set
-    Meff_red = eig_vector'*Meff*eig_vector;
-    Ceff_red = eig_vector'*Ceff*eig_vector;
-    Keff_red = eig_vector'*Keff*eig_vector;
-
-%     B_red = [Ceff_red  Meff_red ; -1*eye(size(Keff_red )) zeros(size(Keff_red ))];
-%     A_red = [Keff_red  zeros(size(Keff_red )); zeros(size(Keff_red )) eye(size(Keff_red))];
-%     
-%     [eig_vector_p_red, eig_value_p_red] = eigs(A_red,B_red,30,'sm');
-    
+    % Compute D matrix
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
-        -1*eye(size(Keff_red)) zeros(size(Keff_red))];
+        -1*eye(size(Keff_red,1)) zeros(size(Keff_red,1))];
 
-    [eig_vector_p_red, eig_value_p_red] = eigs(D,N_modes,'sm');
+    % Compute eigen values
+    [Vd, Dd] = eigs(D,eye(length(D)),length(D),'lm');
 
-
-
-    p_values_red(i) = max(real(-1./diag(eig_value_p_red)));
-    p_values_collect(i,:) = -1./diag(eig_value_p_red);
+    p_values(i) = max(real(-1./diag(Dd)));
+    p_values_collect(i,:) = -1./diag(Dd);
 end
 
 
 %% Plots
-% figure()
-% plot(Uinf_,p_values)
-% grid on
-% grid minor
-% ylabel("$max(Re(p_i))$",'Interpreter','latex')
-% xlabel("$U_{\infty}$",'Interpreter','latex')
-% hold off
 
 figure()
 hold on
-for i = 1:length(Uinf_)
-    plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
+for i = 1:length(p_values_collect(1,:))
+    plot(real(p_values_collect(:,i)),imag(p_values_collect(:,i)),'DisplayName',strcat("Mode ",string(i)))
+    
 end
+xline(0,'color','k')
+yline(0,'color','k')
+xlabel("Real(p_i)")
+ylabel("Imaginary(p_i)")
+legend()
+
 hold off
 
 figure()
-plot(Uinf_,p_values_red)
+
+plot(Uinf_,p_values)
 grid on
 grid minor
 ylabel("$max(Re(p_i))$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
 hold off
+
+end
 
 
 

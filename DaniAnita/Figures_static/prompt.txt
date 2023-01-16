@@ -1,0 +1,194 @@
+#   _   _ ______________  ___  ___   _     
+#  | \ | |  _  | ___ \  \/  | / _ \ | |    
+#  |  \| | | | | |_/ / .  . |/ /_\ \| |    
+#  | . ` | | | |    /| |\/| ||  _  || |    
+#  | |\  \ \_/ / |\ \| |  | || | | || |____
+#  \_| \_/\___/\_| \_\_|  |_/\_| |_/\_____/
+#                                          
+#
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       normal
+AOA:        5.000000 [deg]
+Velocity:   30.000000 [m/s]
+--CAT RESULTS--
+Number of iterations = 6
+w at wing tip        = 45.959595 [mm]
+theta at wing tip    = 0.469136 [deg]
+gamma at wing tip    = 6.279740 [deg]
+CL calculated        = 0.377328
+CL diff              = -0.170984
+Elapsed time         = 0.447123 [s]
+
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       normal
+AOA:        5.000000 [deg]
+Velocity:   50.000000 [m/s]
+--CAT RESULTS--
+Number of iterations = 9
+w at wing tip        = 146.754692 [mm]
+theta at wing tip    = 1.483070 [deg]
+gamma at wing tip    = 20.083919 [deg]
+CL calculated        = 0.423464
+CL diff              = -0.124848
+Elapsed time         = 0.559881 [s]
+
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       normal
+AOA:        7.000000 [deg]
+Velocity:   55.000000 [m/s]
+--CAT RESULTS--
+Number of iterations = 10
+w at wing tip        = 261.255657 [mm]
+theta at wing tip    = 2.631586 [deg]
+gamma at wing tip    = 35.772182 [deg]
+CL calculated        = 0.618128
+CL diff              = -0.149508
+Elapsed time         = 0.761602 [s]
+
+#  ______ _____ _   _ ___________ _____  _____ _   _ _____  _____ 
+#  |  _  \_   _| | | |  ___| ___ \  __ \|  ___| \ | /  __ \|  ___|
+#  | | | | | | | | | | |__ | |_/ / |  \/| |__ |  \| | /  \/| |__  
+#  | | | | | | | | | |  __||    /| | __ |  __|| . ` | |    |  __| 
+#  | |/ / _| |_\ \_/ / |___| |\ \| |_\ \| |___| |\  | \__/\| |___ 
+#  |___/  \___/ \___/\____/\_| \_|\____/\____/\_| \_/\____/\____/ 
+#                                                                 
+#       
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       divergence
+AOA:        7.000000 [deg]
+u_inf(min): 1.000000 [m/s]
+u_inf(max): 60.000000 [m/s]
+--CAT RESULTS--
+Number of iterations = 11
+Divergence mode, printing max values
+w at wing tip        = 329.142237 [mm]
+theta at wing tip    = 3.303608 [deg]
+gamma at wing tip    = 45.092671 [deg]
+CL calculated        = 0.648727
+CL diff              = -0.118909
+Elapsed time         = 5.391265 [s]
+Divergence mode, printing mean values
+w at wing tip        = 98.543731 [mm]
+theta at wing tip    = 0.997380 [deg]
+gamma at wing tip    = 13.482825 [deg]
+CL calculated        = 0.543763
+CL diff              = -0.223873
+Elapsed time         = 5.391265 [s]
+
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       divergence
+AOA:        5.000000 [deg]
+u_inf(min): 1.000000 [m/s]
+u_inf(max): 60.000000 [m/s]
+--CAT RESULTS--
+Number of iterations = 11
+Divergence mode, printing max values
+w at wing tip        = 235.101598 [mm]
+theta at wing tip    = 2.359720 [deg]
+gamma at wing tip    = 32.209051 [deg]
+CL calculated        = 0.463376
+CL diff              = -0.084935
+Elapsed time         = 5.617699 [s]
+Divergence mode, printing mean values
+w at wing tip        = 70.388334 [mm]
+theta at wing tip    = 0.712414 [deg]
+gamma at wing tip    = 9.630583 [deg]
+CL calculated        = 0.388402
+CL diff              = -0.159909
+Elapsed time         = 5.617699 [s]
+
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       divergence
+AOA:        5.000000 [deg]
+u_inf(min): 1.000000 [m/s]
+u_inf(max): 120.000000 [m/s]
+CAT diverged for u_inf=118.797980
+end algorithm and print last ite
+--CAT RESULTS--
+Number of iterations = 1001
+Divergence mode, printing max values
+w at wing tip        = 9027414.353080 [mm]
+theta at wing tip    = 85126.079810 [deg]
+gamma at wing tip    = 1248458.047432 [deg]
+CL calculated        = 3884.607618
+CL diff              = 3884.059307
+Elapsed time         = 48.495609 [s]
+Divergence mode, printing mean values
+w at wing tip        = 92698.607919 [mm]
+theta at wing tip    = 874.305706 [deg]
+gamma at wing tip    = 12819.485000 [deg]
+CL calculated        = 40.249663
+CL diff              = 39.701352
+Elapsed time         = 48.495609 [s]
+
+
+Welcome to Code for Aeroelasticity Task
+CAT v20230107
+Analysis:   static
+ |\__/,|   (`\
+ |_ _  |.--.) )
+ ( T   )     /
+(((^_(((/(((_/
+Mode:       divergence
+AOA:        7.000000 [deg]
+u_inf(min): 1.000000 [m/s]
+u_inf(max): 180.000000 [m/s]
+CAT diverged for u_inf=118.525253
+end algorithm and print last ite
+--CAT RESULTS--
+Number of iterations = 1001
+Divergence mode, printing max values
+w at wing tip        = 731415.612203 [mm]
+theta at wing tip    = 6897.782095 [deg]
+gamma at wing tip    = 101150.520108 [deg]
+CL calculated        = 315.238537
+CL diff              = 314.470901
+Elapsed time         = 33.806744 [s]
+Divergence mode, printing mean values
+w at wing tip        = 12786.130834 [mm]
+theta at wing tip    = 120.832436 [deg]
+gamma at wing tip    = 1767.714529 [deg]
+CL calculated        = 6.011368
+CL diff              = 5.243732
+Elapsed time         = 33.806744 [s]
