@@ -7,8 +7,8 @@ clc, clear, close all
 addpath(genpath('functions'))
 
 % Case solution active/deactivate
-solve_static = false; 
-solve_diverge = false;
+solve_static = true; 
+solve_diverge = true;
 solve_modal = true;
 solve_flutter = true;
 
@@ -41,7 +41,7 @@ x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
 U_inf = 60;  % Freestream velocity (m/s)
-AoA = 1;     % Wing angle of attack (º)
+AoA = 7;     % Wing angle of attack (º)
 rho_inf = 1.3; % Reference air density (kg/m^3)
 
 %% 2. Mesh construction
@@ -55,7 +55,7 @@ Tn = ConnectivityElements(Nel);
 Ts = ConnectivitySubsets(Tn,Nsec,Nesec);
 
 % Dirichlet boundary conditions
-Up = [  0 1 1;
+Up = [  deg2rad(AoA) 1 1;
         0 1 2;
         0 1 3];
 
@@ -102,7 +102,7 @@ end
 
 %% 8. Compute divergence
 if solve_diverge == true
-    Uinf_ = linspace(0.1,150,100);
+    Uinf_ = linspace(0.1,150,50);
     U_diverg = [0];
     w_tip_Uinf = [0];
     
@@ -247,15 +247,18 @@ end
 
 figure()
 hold on
-for i = 1:length(p_values_collect(1,:))
-    plot(real(p_values_collect(:,i)),imag(p_values_collect(:,i)),'DisplayName',strcat("Mode ",string(i)))
-    
+for i = 1:length(p_values_collect(1,:))/2
+    mode = (i-1)*2;
+    plot(real(p_values_collect(:,mode+1)),imag(p_values_collect(:,mode+1)),'DisplayName',strcat("Mode ",string(i)," positive"))
+    plot(real(p_values_collect(:,mode+2)),imag(p_values_collect(:,mode+2)),'DisplayName',strcat("Mode ",string(i)," negative"))
 end
 xline(0,'color','k')
 yline(0,'color','k')
+grid on
+grid minor
 xlabel("Real(p_i)")
 ylabel("Imaginary(p_i)")
-legend()
+legend("Location",'eastoutside')
 
 hold off
 
@@ -264,8 +267,10 @@ figure()
 plot(Uinf_,p_values)
 grid on
 grid minor
-ylabel("$max(Re(p_i))$",'Interpreter','latex')
+ylabel("$max(Real(1/\lambda_i))$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
+yline(0,'color','k')
+legend([strcat("U_{flutter} = ",string(round(interp1(p_values,Uinf_,0),2))," m/s")])
 hold off
 
 end
