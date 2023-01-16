@@ -5,163 +5,106 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc, clear, close all
 addpath('functions\')
-%% User inputs
 
-    % Aerodynamic
-    U_inf = 60; %m/s
-    AoA = 7;
-    rho_inf = 1;
+%% 1. Data input
+% Geometrical data
+c = 0.1; % chord of the wing (m)
 
-    % Number of elements between ribs
-    Neset = 5;
-
-    % To solve the static case
-    solve_static = true;
-
-
-
-%% 1. Initialisation 
-
-% Definition of the location of the ribs
-%                   Rib     Node j      yj  
-y_sections =       [0,       1,           0.0
-                    1,       2,           38.4
-                    2,       3,           76.8
-                    3,       4,           115.2
-                    4,       5,           153.6
-                    5,       6,           192.0
-                    6,       7,           230.4
-                    7,       8,           268.8
-                    8,       9,           307.2
-                    9,       10,          345.6
-                    10,      11,          384.0
-                    11,      12,          422.4
-                    12,      13,          460.8
-                    13,      14,          499.2
-                    14,      15,          537.6
-                    15,      16,          541.6
-                    16,      17,          545.6
-                    0,       18,          550.0 ];
-
-y_sections = y_sections(:,2:3);
-y_sections(:,2) = y_sections(:,2)*1e-3; % Coordiantes in meters
-
-Nsec = length(y_sections(:,2))-1; % number of panels
-
-Nel = Nsec*Neset; % total number of elements
-
-% Centers >Previously computed<
-x_sc = 0.43;
-x_ac = 1/4;
-x_col = 3/4;
-
-% Geometry
-chord = 100*1e-3; %m
-
-% Material properties >Previously computed<
-EI = 5.04517;%6500*1e-3;
-GJ = 6.5977;%5500*1e-3;
-
-%% 2. Structural modelling
+y_sec = [0.0; 38.4; 76.8; 115.2; 153.6; 192.0; 230.4; 268.8; 307.2; 345.6; ...
+         384.0; 422.4; 460.8; 499.2; 537.6; 541.6; 545.6; 550.0]*1e-3; % Section Y coordinate (m)
+Nsec = length(y_sec)-1;             % Number of sections
+Nesec = 5;                          % Number of elements per section
+RibExist = [0, ones(1,Nsec-1), 0];  % Logical matrix for sections that contain ribs
 
 % Material properties
-material.Al.rho = 2795;
-material.Al.E = 71000*1e6;
-material.Al.v = 0.33;
-material.Nylon.rho = 930;
-material.Nylon.E = 1700*1e6;
-material.Nylon.v = 0.394;
-naca_2dt = 18;
+material.Al.rho = 2795;       % Aluminium density (kg/m^3)
+material.Al.E = 71000*1e6;    % Aluminium Young's modulus (Pa)
+material.Al.v = 0.33;         % Aluminium Poisson coefficient (-)
+material.Nylon.rho = 930;     % Nylon density (kg/m^3)
+material.Nylon.E = 1700*1e6;  % Nylin Young's modulus (Pa)
+material.Nylon.v = 0.394;     % Nylon Poisson coefficient (-)
 
-% Define the nodal coordinates
-y_nodal = compute_x_nodal(y_sections(:,2),Neset);
-Nnod = length(y_nodal); % number
+% Structural properties (Pseudo-Experimental) %%%%% REVIEW VALUES %%%%%
+x_sc = 0.43;           % Position of shear center (%chord)
+EI = 5.04517;%6500*1e-3; % Mean value of flexural rigidity (N·m^2)
+GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
+solve_static = true;   % Logical input to active/deactivate static solver
 
-% define the connectivity matrixs
-Tn = ConnectivityElements(Nnod-1);
-Ts = ConnectivitySubsets(Tn,Nsec-1,Neset);
+% Aerodynamic properties
+x_ac = 1/4;  % Position of aerodynamic center (%chord)
+x_col = 3/4; % Position of collocation point (%chord)
+t = 18;      % Thickness of the airfoil (%chord)
+U_inf = 60;  % Freestream velocity (m/s)
+AoA = 10;     % Wing angle of attack (º)
+rho_inf = 1; % Reference air density (kg/m^3)
+
+%% 2. Structural modelling
+% Structural mesh definition
+y_el = ComputeYcoordinates(y_sec,Nsec,Nesec);  % Elements' nodes Y coordinate (m)
+Nnodes = length(y_el);
+Nel = Nnodes - 1;
+
+% Connectivity matrices definition
+Tn = ConnectivityElements(Nel);
+Ts = ConnectivitySubsets(Tn,Nsec,Nesec);
 
 % Define stiffness matrix
-K = def_K_matrix(y_nodal,Neset,Nsec,Nnod,Tn,EI,GJ);
-
-
+K = ComputeKmatrix(y_el,Tn,EI,GJ);
 % Define mass matrix
-M = def_M_matrix(y_nodal,Neset,Nsec,Nnod,Tn,Ts,material,naca_2dt,chord,x_sc);
+M = ComputeMmatrix(y_el,Tn,Ts,material,t,c,x_sc,RibExist);
 
-
-% plot matrices
-figure()
-title("K")
-x_surf = linspace(1,length(K),length(K));
-surf(x_surf,x_surf,K,'EdgeColor','none')
-set(gca,'zscale','log')
-
-figure()
-title("M")
-x_surf = linspace(1,length(M),length(M));
-surf(x_surf,x_surf,M,'EdgeColor','none')
-set(gca,'zscale','log')
+% % plot matrices
+% figure()
+% title("K")
+% x_surf = linspace(1,length(K),length(K));
+% surf(x_surf,x_surf,K,'EdgeColor','none')
+% set(gca,'zscale','log')
+% 
+% figure()
+% title("M")
+% x_surf = linspace(1,length(M),length(M));
+% surf(x_surf,x_surf,M,'EdgeColor','none')
+% set(gca,'zscale','log')
 
 %% 3. Aerodynamics modelling
-
-% Define the chord vector
-chord_y = ones(1,length(y_nodal))*chord;
-
-% Compute area of the elements
-%S = compute_element_surface(chord_y,y_nodal);
-S = compute_element_length(y_nodal);
-
-% Compute chord/4 point and the colocation point spanwise location
-ac_pos = compute_aero_point(y_nodal,chord_y,x_ac);%*1e-3;
-col_pos = compute_aero_point(y_nodal,chord_y,x_col);%*1e-3;
-segment_coor = compute_segment_coordinate(y_nodal,ac_pos,chord_y);%*1e-3;
+% Compute aerodynamic center's and colocation's points 
+ac_pos =  x_ac*c;
+col_pos = ComputePointCoordinatesAerodynamics(y_el,c,x_col);
+vortex_coord = ComputeVortexLinesNodes(y_el,ac_pos,c);
 
 % Compute Influence matrix
-A_aero = compute_A_matrix(col_pos,segment_coor);
+A = ComputeAmatrix(col_pos,vortex_coord);
+% Compute element's size matrix
+S = ComputeElementSize(y_el);
 
 %% 4. Aeroelastic linear coupling
-
 % Compute the aerodynamic coupling matrices
-[I_au_0,I_au_1,I_au_2] = compute_I_au(U_inf,Nnod,Nel,Tn);
-
+[I_au_1, I_au_2, I_au_3] = ComputeDisplacementsCoupling(y_el,Tn,U_inf);
 % Compute the structural coupling matrix
-I_fL = compute_I_fL(Nnod,Nel,-(x_ac-x_sc)*chord);
+e = (x_ac - x_sc)*c;
+I_fL = ComputeForcesCoupling(y_el,Tn,e);
 
 %% Boundary conditions
-
 % Fixed DOF
 Up = [  0 1 1;
         0 1 2;
         0 1 3];
 
 % Compute the indeces of the free fix DOF
-[Ip,If,u_static] = compute_boundary_conditions(Up,3*Nnod);
+[Ip,If,u_static] = ComputeBoundaryConditions(Up,3*Nnodes);
 
-% Split the matrices in free and fix
-Kf = K(If,If);
-Mf = M(If,If);
-
-I_au_0_f = I_au_0(:,If);
-I_au_1_f = I_au_1(:,If);
-I_au_2_f = I_au_2(:,If);
-
-I_fL_f = I_fL(If,:);
-
-% Collect all parameters in a list
-Parameters_list.S = S;
-Parameters_list.rho = rho_inf;
-Parameters_list.Nnod = Nnod;
-Parameters_list.Nel = Nel;
-Parameters_list.Tn = Tn;
-Parameters_list.If = If;
-Parameters_list.I_fl = I_fL;
-Parameters_list.A_aero = A_aero;
+% % Split the matrices in free and fix %%%% TO DO JUST BEFORE EIGS? %%%%
+% Kf = K(If,If);
+% Mf = M(If,If);
+% I_au_1_f = I_au_1(:,If);
+% I_au_2_f = I_au_2(:,If);
+% I_au_3_f = I_au_3(:,If);
+% I_fL_f = I_fL(If,:);
 
 %% 5 Static case solution
 if solve_static == true
-    [Meff,Ceff,Keff] = compute_efective_matrices(M,K,U_inf,Parameters_list);
-    solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,Keff,U_inf,rho_inf,AoA,true);
-    %solve_static_case(Nnod,y_nodal,u_static,If,Ip,I_fL_f,S,A_aero,K,U_inf,rho_inf,AoA,true);
+    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
+    StaticSolver(y_el,u_static,If,Ip,I_fL,S,A,Keff,U_inf,rho_inf,AoA,true);
 end
 
 %% Compute divergence
