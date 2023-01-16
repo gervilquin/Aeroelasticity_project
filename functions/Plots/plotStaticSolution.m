@@ -3,26 +3,31 @@ function plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA_deg,plot_bool)
    % Resultat displacements for each DOF
    twist = u(1:3:end);
    u_vertical = u(2:3:end); 
-   flection = u(3:3:end);
+   deflection = u(3:3:end);
     
    % Results presentation
    if plot_bool == true
         figure(1)
         subplot(3,1,1)
         plot(y_el,rad2deg(twist))
-        ylabel("Twist [deg]","Interpreter","latex")
-        title(strcat("U_{\infty} = ",num2str(U_inf)," m/s   AoA = ",num2str(AoA_deg)," deg"))
+
+        ylim([AoA_deg,AoA_deg+1.1*(max(rad2deg(twist))-AoA_deg)])
+
+        ylabel("$\theta$ [deg]","Interpreter","latex")
+        title(strcat("$U_{\infty}$ = ",num2str(U_inf)," m/s   AoA = ",num2str(AoA_deg)," deg"),'Interpreter','latex')
         grid on
         grid minor
         subplot(3,1,2)
         plot(y_el,u_vertical)
-        ylabel("U vertical [m]","Interpreter","latex")       
+        ylim([0,1.1*max(u_vertical)])
+        ylabel("$\gamma$[m]","Interpreter","latex")       
         grid on
         grid minor
         subplot(3,1,3)
-        plot(y_el,flection)
+        plot(y_el,deflection)
+        ylim([0,1.1*max(deflection)])
         ylabel("Deflection","Interpreter","latex")
-        xlabel("Y [mm]",'Interpreter','latex')
+        xlabel("$\gamma$ [-]",'Interpreter','latex')
         grid on
         grid minor
 
@@ -32,13 +37,13 @@ function plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA_deg,plot_bool)
         disp(['Theroetical lift       = ',num2str(L_t)])
         disp(['Lift after I_fl = ',num2str(sum(F(2:3:end)))])
         
-        figure(2)
-        hold on
-        plot(y_el(1:end-1),L)
-        plot(y_el(1:end-1),L_t/length(L)*ones(length(L)))
-        xlabel("Y [m]","Interpreter","latex")
-        ylabel("Lift [N/m]")
-        legend(["Numerical Lifting line","Theoretical lifting line"])
-        hold off
+%         figure(2)
+%         hold on
+%         plot(y_el(1:end-1),L)
+%         plot(y_el(1:end-1),L_t/length(L)*ones(length(L)))
+%         xlabel("Y [m]","Interpreter","latex")
+%         ylabel("Lift [N/m]")
+%         legend(["Numerical Lifting line","Theoretical lifting line"])
+%         hold off
     end
 end

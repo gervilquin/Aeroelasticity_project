@@ -1,4 +1,4 @@
-function [twist,u_vertical,flection] = AeroStaticSolver(y_el,u,If,Ip,I_fL,I_au_0,S,A_aero,K,U_inf,rho_inf,AoA_deg,plot_bool)
+function [twist,u_vertical,deflection] = AeroStaticSolver(y_el,u,If,Ip,I_fL,I_au_0,S,A_aero,K,U_inf,rho_inf,AoA_deg,plot_bool)
     % Initialisation 
     nel = length(y_el)-1;
     max_tol = 1e-6;
@@ -39,7 +39,7 @@ function [twist,u_vertical,flection] = AeroStaticSolver(y_el,u,If,Ip,I_fL,I_au_0
     % Results presentation
     twist = u(1:3:end);
     u_vertical = u(2:3:end); 
-    flection = u(3:3:end);
+    deflection = u(3:3:end);
     
     if plot_bool == true
         figure()
@@ -47,20 +47,23 @@ function [twist,u_vertical,flection] = AeroStaticSolver(y_el,u,If,Ip,I_fL,I_au_0
         hold on
         plot(y_el,rad2deg(twist))
         plot(y_el(2:end),rad2deg(alpha))
-        ylabel("Twist [deg]","Interpreter","latex")
-        title(strcat("U_{\infty} = ",num2str(U_inf)," m/s   AoA = ",num2str(AoA_deg)," deg"))
+        ylim([AoA_deg,AoA_deg+1.1*(max(rad2deg(twist))-AoA_deg)])
+        ylabel("$\theta$ [deg]","Interpreter","latex")
+        title(strcat("$U_{\infty}$ = ",num2str(U_inf)," m/s   AoA = ",num2str(AoA_deg)," deg"),'Interpreter','latex')
         grid on
         grid minor
-        legend(["twist","alpha"])
+        legend(["$\theta$","$\alpha$"],'Interpreter','latex','Location','best')
         hold off
         subplot(3,1,2)
         plot(y_el,u_vertical)
-        ylabel("U vertical [m]","Interpreter","latex")       
+        ylim([0,1.1*max(u_vertical)])
+        ylabel("$w_{sc}$ [m]","Interpreter","latex")       
         grid on
         grid minor
         subplot(3,1,3)
-        plot(y_el,flection)
-        ylabel("Deflection","Interpreter","latex")
+        plot(y_el,deflection)
+        ylim([0,1.1*max(deflection)])
+        ylabel("$\gamma$ [-]","Interpreter","latex")
         xlabel("Y [mm]",'Interpreter','latex')
         grid on
         grid minor

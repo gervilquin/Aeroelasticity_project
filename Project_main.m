@@ -40,8 +40,8 @@ GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
 x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
-U_inf = 60;  % Freestream velocity (m/s)
-AoA = 7;     % Wing angle of attack (º)
+U_inf = 30;  % Freestream velocity (m/s)
+AoA = 5;     % Wing angle of attack (º)
 rho_inf = 1.3; % Reference air density (kg/m^3)
 
 %% 2. Mesh construction
@@ -91,6 +91,7 @@ I_fL = ComputeForcesCoupling(y_el,Tn,e);
 if solve_static == true
     [u] = StaticSolver(K,F,u_static,If,Ip);
     plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA,true)
+    saveas(gcf,'report/figures/static_solution','epsc')
 end
 
 
@@ -98,6 +99,7 @@ end
 if solve_static == true
     [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
     AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,true);
+    saveas(gcf,'report/figures/Aeroelastic_solution','epsc')
 end
 
 %% 8. Compute divergence
@@ -125,14 +127,15 @@ if solve_diverge == true
     hold on
     plot(U_diverg,w_tip_Uinf)
     xlabel("$U_{\infty}$","Interpreter","latex")
-    ylabel("$w^{tip}$","Interpreter","latex")
+    ylabel("$w_{sc}^{tip}$","Interpreter","latex")
     grid on
     grid minor
-    legend([strcat("Divergence $U_{\infty}$ = ",string(U_diverg(end))," m/s")],'location','northwest',"Interpreter","latex")
+    legend([strcat("Divergence $U_{\infty}$ = ",string(round(U_diverg(end),2))," m/s")],'location','northwest',"Interpreter","latex")
     hold off
+    saveas(gcf,'report/figures/divergence_velocity','epsc')
 end
 
-%% Modal analysis
+%% 9. Modal analysis
 if solve_modal == true
     % define the number of modes that want to be returned
     Nm = 6; %first 6 modes
@@ -165,7 +168,7 @@ if solve_modal == true
     grid on
     grid minor
     hold off
-    ylabel("Twist","Interpreter","latex")
+    ylabel("$\theta$","Interpreter","latex")
     
     
     %Plot mode shapes in the vertical displacement 
@@ -177,7 +180,7 @@ if solve_modal == true
     grid on
     grid minor
     hold off
-    ylabel("U vertical","Interpreter","latex")
+    ylabel("$w_{sc}$","Interpreter","latex")
 
     %Plot the mode shapes in deflection
     nexttile(tcl)
@@ -188,27 +191,33 @@ if solve_modal == true
     grid on
     grid minor
     hold off
-    ylabel("Deflection","Interpreter","latex")
+    ylabel("$\gamma$","Interpreter","latex")
     xlabel("Y [mm]",'Interpreter','latex')
 
     % Add legend to the side
-    Lgnd = legend('show');
+    Lgnd = legend('show','interpreter','latex');
     Lgnd.Layout.Tile = 'East';
+
+    saveas(gcf,'report/figures/Natural_modes','epsc')
 
 end
 
 
 
-%% 5. Flutter solver
+%% 10. Flutter solver
 if solve_flutter == true
 %Uinf_ = logspace(-10,-1,100);
 %Uinf_ = linspace(0.1,U_diverg(end),3);
-Uinf_ = linspace(20,60,100);
+Uinf_ = linspace(0.1,60,100);
 %Uinf_ = [20];
 
 % Get the eigenvalues of M and K
-N_reduced = 3;
-N_modes = 30;
+N_reduced_ = [3];
+
+for k = 1:length(N_reduced_)
+
+N_reduced = N_reduced_(k);
+%N_reduced = 3;
 [Vr, Dr] = eigs(K(If,If),M(If,If),N_reduced,'sm');
 
 % Initialize matrices
@@ -251,14 +260,19 @@ for i = 1:length(p_values_collect(1,:))/2
     mode = (i-1)*2;
     plot(real(p_values_collect(:,mode+1)),imag(p_values_collect(:,mode+1)),'DisplayName',strcat("Mode ",string(i)," positive"))
     plot(real(p_values_collect(:,mode+2)),imag(p_values_collect(:,mode+2)),'DisplayName',strcat("Mode ",string(i)," negative"))
+    plot(real(p_values_collect(1,mode+1)),imag(p_values_collect(1,mode+1)),'HandleVisibility','off','Marker','o','Color','red')
+    plot(real(p_values_collect(1,mode+2)),imag(p_values_collect(1,mode+2)),'HandleVisibility','off','Marker','o','Color','red')
+    plot(real(p_values_collect(end,mode+1)),imag(p_values_collect(end,mode+1)),'HandleVisibility','off','Marker','x','Color','g')
+    plot(real(p_values_collect(end,mode+2)),imag(p_values_collect(end,mode+2)),'HandleVisibility','off','Marker','x','Color','g')
 end
-xline(0,'color','k')
-yline(0,'color','k')
+xline(0,'color','k','HandleVisibility','off')
+yline(0,'color','k','HandleVisibility','off')
 grid on
 grid minor
-xlabel("Real(p_i)")
-ylabel("Imaginary(p_i)")
-legend("Location",'eastoutside')
+xlabel("Re($\hat{p}_i$)",'Interpreter','latex')
+ylabel("Im($\hat{p}_i$)",'Interpreter','latex')
+legend("Location",'eastoutside','Interpreter','latex')
+saveas(gcf,'report/figures/p_value_complex','epsc')
 
 hold off
 
@@ -267,11 +281,14 @@ figure()
 plot(Uinf_,p_values)
 grid on
 grid minor
-ylabel("$max(Real(1/\lambda_i))$",'Interpreter','latex')
+ylabel("$max{Re(p_i)}$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
 yline(0,'color','k')
-legend([strcat("U_{flutter} = ",string(round(interp1(p_values,Uinf_,0),2))," m/s")])
+legend([strcat("$U_{flutter}$ = ",string(round(compute_flutter_velocity(p_values,Uinf_),2))," m/s")],'Interpreter','latex')
 hold off
+saveas(gcf,'report/figures/Flutter_velocity','epsc')
+
+end
 
 end
 
