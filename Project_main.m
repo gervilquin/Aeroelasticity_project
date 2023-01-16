@@ -9,7 +9,7 @@ addpath('functions\')
 % Case solution active/deactivate
 solve_static = false; 
 solve_diverge = false;
-solve_modal = false;
+solve_modal = true;
 solve_flutter = true;
 
 %% 1. Data input
@@ -41,7 +41,7 @@ x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
 U_inf = 60;  % Freestream velocity (m/s)
-AoA = 10;     % Wing angle of attack (º)
+AoA = 1;     % Wing angle of attack (º)
 rho_inf = 1.3; % Reference air density (kg/m^3)
 
 %% 2. Structural modelling
@@ -222,16 +222,17 @@ end
 if solve_flutter == true
 %Uinf_ = logspace(-10,-1,100);
 %Uinf_ = linspace(0.1,U_diverg(end),3);
-Uinf_ = linspace(0.1,100,100);
+Uinf_ = linspace(20,60,100);
+%Uinf_ = [20];
 
 % Get the eigenvalues of M and K
-N_reduced = 30;
-N_modes = 10;
+N_reduced = 3;
+N_modes = 30;
 [Vr, Dr] = eigs(K(If,If),M(If,If),N_reduced,'sm');
 
 % Initialize matrices
 p_values = zeros(length(Uinf_),1);
-p_values_collect = zeros(length(Uinf_),N_modes);
+p_values_collect = zeros(length(Uinf_),2*N_reduced);
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
@@ -251,10 +252,10 @@ for i = 1:length(Uinf_)
 
     % Compute D matrix
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
-        -1*eye(size(Keff_red)) zeros(size(Keff_red))];
+        -1*eye(size(Keff_red,1)) zeros(size(Keff_red,1))];
 
     % Compute eigen values
-    [Vd, Dd] = eigs(D,N_modes,'sm');
+    [Vd, Dd] = eigs(D,eye(length(D)),length(D),'lm');
 
     p_values(i) = max(real(-1./diag(Dd)));
     p_values_collect(i,:) = -1./diag(Dd);
@@ -263,14 +264,22 @@ end
 
 %% Plots
 
-% figure()
-% hold on
-% for i = 1:length(Uinf_)
-%     plot(real(p_values_collect(i,:)),imag(p_values_collect(i,:)))
-% end
-% hold off
+figure()
+hold on
+for i = 1:length(p_values_collect(1,:))
+    plot(real(p_values_collect(:,i)),imag(p_values_collect(:,i)),'DisplayName',strcat("Mode ",string(i)))
+    
+end
+xline(0,'color','k')
+yline(0,'color','k')
+xlabel("Real(p_i)")
+ylabel("Imaginary(p_i)")
+legend()
+
+hold off
 
 figure()
+
 plot(Uinf_,p_values)
 grid on
 grid minor
