@@ -7,10 +7,10 @@ clc, clear, close all
 addpath(genpath('functions'))
 
 % Case solution active/deactivate
-solve_static = true; 
-solve_diverge = true;
+solve_static = false; 
+solve_diverge = false;
 solve_modal = true;
-solve_flutter = true;
+solve_flutter = false;
 
 %% 1. Data input
 % Geometrical data
@@ -98,8 +98,38 @@ end
 %% 7. Static solution with aerocoupling
 if solve_static == true
     [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
-    AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,true);
+    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,true);
     saveas(gcf,'report/figures/Aeroelastic_solution','epsc')
+
+
+% plot static with aeroeastatic solutions
+plot2StaticSolution([u(1:3:end),u(2:3:end),u(3:3:end),t,w,g],F,L,y_el,U_inf,rho_inf,AoA,true)
+saveas(gcf,'report/figures/compare_static_solution','epsc')
+
+% compute tip deflections for various AoA and velocities
+aoa = [5,5,10,10];
+uinf = [30,50,30,50];
+u_tip = zeros(6,length(aoa));
+for i=1:length(aoa)
+    Up = [  deg2rad(aoa(i)) 1 1;
+        0 1 2;
+        0 1 3];
+
+    [Ip,If,u_static] = ComputeBoundaryConditions(Up,3*Nnodes);
+
+    [F,L] = ComputeFvector(Nel,uinf(i),rho_inf,aoa(i),S,A,I_fL);
+    [u] = StaticSolver(K,F,u_static,If,Ip);
+
+    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,uinf(i),rho_inf,A,S,I_fL);
+    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,uinf(i),rho_inf,aoa(i),false);
+
+    u_tip(1,i) = rad2deg(u(end-2));
+    u_tip(2,i) = u(end-1);
+    u_tip(3,i) = u(end);
+    u_tip(4,i) = rad2deg(t(end));
+    u_tip(5,i) = w(end);
+    u_tip(6,i) = g(end);
+end
 end
 
 %% 8. Compute divergence
