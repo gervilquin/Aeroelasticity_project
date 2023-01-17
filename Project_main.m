@@ -8,8 +8,8 @@ addpath(genpath('functions'))
 
 % Case solution active/deactivate
 solve_static = false; 
-solve_diverge = false;
-solve_modal = true;
+solve_diverge = true;
+solve_modal = false;
 solve_flutter = false;
 
 %% 1. Data input
@@ -40,7 +40,7 @@ GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
 x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
-U_inf = 30;  % Freestream velocity (m/s)
+U_inf = 107;  % Freestream velocity (m/s)
 AoA = 5;     % Wing angle of attack (º)
 rho_inf = 1.3; % Reference air density (kg/m^3)
 
@@ -97,8 +97,7 @@ end
 
 %% 7. Static solution with aerocoupling
 if solve_static == true
-    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
-    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,true);
+    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,K,U_inf,rho_inf,AoA,true);
     saveas(gcf,'report/figures/Aeroelastic_solution','epsc')
 
 
@@ -120,8 +119,7 @@ for i=1:length(aoa)
     [F,L] = ComputeFvector(Nel,uinf(i),rho_inf,aoa(i),S,A,I_fL);
     [u] = StaticSolver(K,F,u_static,If,Ip);
 
-    [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,uinf(i),rho_inf,A,S,I_fL);
-    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,uinf(i),rho_inf,aoa(i),false);
+    [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,K,uinf(i),rho_inf,aoa(i),false);
 
     u_tip(1,i) = rad2deg(u(end-2));
     u_tip(2,i) = u(end-1);
@@ -134,35 +132,54 @@ end
 
 %% 8. Compute divergence
 if solve_diverge == true
-    Uinf_ = linspace(0.1,150,50);
-    U_diverg = [0];
-    w_tip_Uinf = [0];
+
+    % Complete Aerodynamic stiffness matrix
+    Ka = -I_fL*(S*inv(A))*I_au_0;
+     
+    % Since Ka is no invertable, only the DOFs for the elastic twist will
+    % be considerated
+    Ks_d = K(1:3:end,1:3:end);
+    Ka_d = Ka(1:3:end,1:3:end);
+
+    % Eigen value problem with only the free DOFS
+    [V,D]=eig(Ka_d(2:end,2:end)\Ks_d(2:end,2:end)); 
+    D=diag(D);
+    D=D(D>0);% filter positive values
+    qD=min(D);% retain the smallest one
+
+    U_diverg = sqrt(qD/rho_inf);
+
+    fprintf("Divergence free stream velocity = %.3f m/s",U_diverg)
+
+%     Uinf_ = linspace(0.1,200,200);
+%     U_diverg = [0];
+%     w_tip_Uinf = [0];
+  
+%     for i=1:length(Uinf_)
+%         U_inf = Uinf_(i);
+%     
+%         [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
+% 
+%         [theta,w,gamma] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,K,U_inf,rho_inf,AoA,false);
+%         
+%         if (w(end) - w_tip_Uinf(end) > 0)
+%             w_tip_Uinf(end+1) = w(end-1);
+%             U_diverg(end+1) = U_inf;
+%         end
+%     
+%     end
     
-    
-    for i=1:length(Uinf_)
-        U_inf = Uinf_(i);
-    
-        [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
-    
-        [theta,w,gamma] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,Keff,U_inf,rho_inf,AoA,false);
-        
-        if (w(end-1) - w_tip_Uinf(end) > 0)
-            w_tip_Uinf(end+1) = w(end-1);
-            U_diverg(end+1) = U_inf;
-        end
-    
-    end
-    
-    figure()
-    hold on
-    plot(U_diverg,w_tip_Uinf)
-    xlabel("$U_{\infty}$","Interpreter","latex")
-    ylabel("$w_{sc}^{tip}$","Interpreter","latex")
-    grid on
-    grid minor
-    legend([strcat("Divergence $U_{\infty}$ = ",string(round(U_diverg(end),2))," m/s")],'location','northwest',"Interpreter","latex")
-    hold off
-    saveas(gcf,'report/figures/divergence_velocity','epsc')
+%     figure()
+%     hold on
+%     plot(U_diverg,w_tip_Uinf)
+% 
+%     xlabel("$U_{\infty}$","Interpreter","latex")
+%     ylabel("$w_{sc}^{tip}$","Interpreter","latex")
+%     grid on
+%     grid minor
+%     legend([strcat("Divergence $U_{\infty}$ = ",string(round(U_diverg(end),2))," m/s")],'location','northwest',"Interpreter","latex")
+%     hold off
+%     saveas(gcf,'report/figures/divergence_velocity','epsc')
 end
 
 %% 9. Modal analysis
@@ -242,7 +259,7 @@ Uinf_ = linspace(0.1,60,100);
 %Uinf_ = [20];
 
 % Get the eigenvalues of M and K
-N_reduced_ = [3];
+N_reduced_ = [4];
 
 for k = 1:length(N_reduced_)
 
@@ -275,7 +292,8 @@ for i = 1:length(Uinf_)
         -1*eye(size(Keff_red,1)) zeros(size(Keff_red,1))];
 
     % Compute eigen values
-    [Vd, Dd] = eigs(D,eye(length(D)),length(D),'lm');
+%     [Vd, Dd] = eigs(D,eye(length(D)),length(D),'lm');
+    [Vd, Dd] = eig(D);%,eye(length(D)));
 
     p_values(i) = max(real(-1./diag(Dd)));
     p_values_collect(i,:) = -1./diag(Dd);
@@ -317,6 +335,32 @@ yline(0,'color','k')
 legend([strcat("$U_{flutter}$ = ",string(round(compute_flutter_velocity(p_values,Uinf_),2))," m/s")],'Interpreter','latex')
 hold off
 saveas(gcf,'report/figures/Flutter_velocity','epsc')
+
+figure()
+tcl = tiledlayout(2,1);
+%subplot(2,1,1)
+nexttile(tcl)
+hold on
+plot(Uinf_,real(p_values_collect),'.');
+ylabel("$Re(p_i)$",'Interpreter','latex')
+%legend('Location','eastoutside','Interpreter','latex')
+xlabel("$U_{\infty}$",'Interpreter','latex')
+grid on
+grid minor
+hold off
+
+%subplot(2,1,2)
+nexttile(tcl)
+hold on
+plot(Uinf_,abs(imag(p_values_collect))/2/pi,'.');
+ylabel("$|Im(p_i)|/2\pi$",'Interpreter','latex')
+xlabel("$U_{\infty}$",'Interpreter','latex')
+grid on
+grid minor
+hold off
+
+Lgnd = legend('show','interpreter','latex');
+Lgnd.Layout.Tile = 'East';
 
 end
 
