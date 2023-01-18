@@ -8,9 +8,9 @@ addpath(genpath('functions'))
 
 % Case solution active/deactivate
 solve_static = false; 
-solve_diverge = true;
+solve_diverge = false;
 solve_modal = false;
-solve_flutter = false;
+solve_flutter = true;
 
 %% 1. Data input
 % Geometrical data
@@ -40,7 +40,7 @@ GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
 x_ac = 1/4;  % Position of aerodynamic center (%chord)
 x_col = 3/4; % Position of collocation point (%chord)
 t = 18;      % Thickness of the airfoil (%chord)
-U_inf = 107;  % Freestream velocity (m/s)
+U_inf = 30;  % Freestream velocity (m/s)
 AoA = 5;     % Wing angle of attack (º)
 rho_inf = 1.3; % Reference air density (kg/m^3)
 
@@ -106,8 +106,8 @@ plot2StaticSolution([u(1:3:end),u(2:3:end),u(3:3:end),t,w,g],F,L,y_el,U_inf,rho_
 saveas(gcf,'report/figures/compare_static_solution','epsc')
 
 % compute tip deflections for various AoA and velocities
-aoa = [5,5,10,10];
-uinf = [30,50,30,50];
+aoa = [5,10,5,10];
+uinf = [30,30,50,50];
 u_tip = zeros(6,length(aoa));
 for i=1:length(aoa)
     Up = [  deg2rad(aoa(i)) 1 1;
@@ -259,7 +259,7 @@ Uinf_ = linspace(0.1,60,100);
 %Uinf_ = [20];
 
 % Get the eigenvalues of M and K
-N_reduced_ = [4];
+N_reduced_ = [6];
 
 for k = 1:length(N_reduced_)
 
@@ -292,8 +292,8 @@ for i = 1:length(Uinf_)
         -1*eye(size(Keff_red,1)) zeros(size(Keff_red,1))];
 
     % Compute eigen values
-%     [Vd, Dd] = eigs(D,eye(length(D)),length(D),'lm');
-    [Vd, Dd] = eig(D);%,eye(length(D)));
+
+    [Vd, Dd] = eig(D);
 
     p_values(i) = max(real(-1./diag(Dd)));
     p_values_collect(i,:) = -1./diag(Dd);
@@ -358,9 +358,10 @@ xlabel("$U_{\infty}$",'Interpreter','latex')
 grid on
 grid minor
 hold off
-
-Lgnd = legend('show','interpreter','latex');
+labels = ["Mode 1","Mode 1","Mode 2","Mode 2","Mode 3","Mode 3","Mode 4","Mode 4","Mode 5","Mode 5","Mode 6","Mode 6"];
+Lgnd = legend(labels,'interpreter','latex');
 Lgnd.Layout.Tile = 'East';
+saveas(gcf,'report/figures/Flutter_imag_real_p','epsc')
 
 end
 
