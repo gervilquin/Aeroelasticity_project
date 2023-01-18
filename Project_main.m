@@ -8,14 +8,13 @@ addpath(genpath('functions'))
 
 % Case solution active/deactivate
 solve_static = false; 
-solve_diverge = false;
-solve_modal = true;
-solve_flutter = true;
+solve_diverge = true;
+solve_modal = false;
+solve_flutter = false;
 
 %% 1. Data input
 % Geometrical data
-c = 0.1; % chord of the wing (m)
-
+c = 0.1; % chord of the wing (m)                            
 y_sec = [0.0; 38.4; 76.8; 115.2; 153.6; 192.0; 230.4; 268.8; 307.2; 345.6; ...
          384.0; 422.4; 460.8; 499.2; 537.6; 541.6; 545.6; 550.0]*1e-3; % Section Y coordinate (m)
 Nsec = length(y_sec)-1;             % Number of sections
@@ -30,10 +29,10 @@ material.Nylon.rho = 930;     % Nylon density (kg/m^3)
 material.Nylon.E = 1700*1e6;  % Nylin Young's modulus (Pa)
 material.Nylon.v = 0.394;     % Nylon Poisson coefficient (-)
 
-% Structural properties (Pseudo-Experimental) %%%%% REVIEW VALUES %%%%%
-x_sc = 0.43;           % Position of shear center (%chord)
-EI = 5.04517;%6500*1e-3; % Mean value of flexural rigidity (N·m^2)
-GJ = 6.5977;%5500*1e-3;  % Mean value of torsional rigidity (N·m^2/rad)
+% Structural properties (Pseudo-Experimental) 
+x_sc = 0.43;  % Position of shear center (%chord)
+EI = 5.04;    % Mean value of flexural rigidity (N·m^2)
+GJ = 6.59;    % Mean value of torsional rigidity (N·m^2/rad)
 
 
 % Aerodynamic properties
@@ -144,49 +143,6 @@ if solve_diverge == true
 
     U_diverg = sqrt(1/rho_inf/qD);
     fprintf("Divergence free stream velocity = %.3f m/s",U_diverg)
-
-%     % Since Ka is no invertable, only the DOFs for the elastic twist will
-%     % be considerated
-%     Ks_d = K(1:3:end,1:3:end);
-%     Ka_d = Ka(1:3:end,1:3:end);
-% 
-%     % Eigen value problem with only the free DOFS
-%     [V,D]=eig(Ka_d(2:end,2:end)\Ks_d(2:end,2:end)); 
-%     D=diag(D);
-%     D=D(D>0);% filter positive values
-%     qD=min(D);% retain the smallest one
-% 
-%     U_diverg = sqrt(qD/rho_inf);
-
-%     Uinf_ = linspace(0.1,200,200);
-%     U_diverg = [0];
-%     w_tip_Uinf = [0];
-  
-%     for i=1:length(Uinf_)
-%         U_inf = Uinf_(i);
-%     
-%         [Meff,Ceff,Keff] = ComputeEffectiveMatrix(K,M,y_el,Tn,U_inf,rho_inf,A,S,I_fL);
-% 
-%         [theta,w,gamma] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,K,U_inf,rho_inf,AoA,false);
-%         
-%         if (w(end) - w_tip_Uinf(end) > 0)
-%             w_tip_Uinf(end+1) = w(end-1);
-%             U_diverg(end+1) = U_inf;
-%         end
-%     
-%     end
-    
-%     figure()
-%     hold on
-%     plot(U_diverg,w_tip_Uinf)
-% 
-%     xlabel("$U_{\infty}$","Interpreter","latex")
-%     ylabel("$w_{sc}^{tip}$","Interpreter","latex")
-%     grid on
-%     grid minor
-%     legend([strcat("Divergence $U_{\infty}$ = ",string(round(U_diverg(end),2))," m/s")],'location','northwest',"Interpreter","latex")
-%     hold off
-%     saveas(gcf,'report/figures/divergence_velocity','epsc')
 end
 
 %% 9. Modal analysis
@@ -260,10 +216,7 @@ end
 
 %% 10. Flutter solver
 if solve_flutter == true
-%Uinf_ = logspace(-10,-1,100);
-%Uinf_ = linspace(0.1,U_diverg(end),3);
 Uinf_ = linspace(0.1,30,100);
-%Uinf_ = [20];
 
 % Get the eigenvalues of M and K
 N_reduced_ = [6];
@@ -271,12 +224,10 @@ N_reduced_ = [6];
 for k = 1:length(N_reduced_)
 
 N_reduced = N_reduced_(k);
-%N_reduced = 3;
 [Vr, Dr] = eigs(K(If,If),M(If,If),N_reduced,'sm');
 
 % Initialize matrices
 p_values = zeros(length(Uinf_),1);
-%p_values_collect = zeros(length(Uinf_),2*N_reduced);
 p_real = zeros(length(Uinf_),2*N_reduced);
 p_imag = zeros(length(Uinf_),2*N_reduced);
 
@@ -292,9 +243,15 @@ for i = 1:length(Uinf_)
     Keff = Keff(If,If);
 
     % Order reduction
-    Meff_red = Vr'*Meff*Vr;
-    Ceff_red = Vr'*Ceff*Vr;
-    Keff_red = Vr'*Keff*Vr;
+    Phi_r = zeros(Nnodes*3,N_reduced); 
+    for m =1:length(Vr(1,:))
+        Phi_r(If,m) = Vr(:,m)/sqrt(Vr(:,m)'*M(If,If)*Vr(:,m));
+    end
+    Phi_r = Phi_r(If,:);
+
+    Meff_red = Phi_r'*Meff*Phi_r;
+    Ceff_red = Phi_r'*Ceff*Phi_r;
+    Keff_red = Phi_r'*Keff*Phi_r;
 
     % Compute D matrix
     D = [Keff_red\Ceff_red Keff_red\Meff_red;
