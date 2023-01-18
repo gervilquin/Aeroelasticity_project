@@ -9,7 +9,7 @@ addpath(genpath('functions'))
 % Case solution active/deactivate
 solve_static = false; 
 solve_diverge = false;
-solve_modal = false;
+solve_modal = true;
 solve_flutter = true;
 
 %% 1. Data input
@@ -136,20 +136,27 @@ if solve_diverge == true
     % Complete Aerodynamic stiffness matrix
     Ka = -I_fL*(S*inv(A))*I_au_0;
      
-    % Since Ka is no invertable, only the DOFs for the elastic twist will
-    % be considerated
-    Ks_d = K(1:3:end,1:3:end);
-    Ka_d = Ka(1:3:end,1:3:end);
-
     % Eigen value problem with only the free DOFS
-    [V,D]=eig(Ka_d(2:end,2:end)\Ks_d(2:end,2:end)); 
+    [V,D]=eig(Ka(4:end,4:end)*inv(K(4:end,4:end))); 
     D=diag(D);
     D=D(D>0);% filter positive values
-    qD=min(D);% retain the smallest one
+    qD=max(D);% retain the smallest one
 
-    U_diverg = sqrt(qD/rho_inf);
-
+    U_diverg = sqrt(1/rho_inf/qD);
     fprintf("Divergence free stream velocity = %.3f m/s",U_diverg)
+
+%     % Since Ka is no invertable, only the DOFs for the elastic twist will
+%     % be considerated
+%     Ks_d = K(1:3:end,1:3:end);
+%     Ka_d = Ka(1:3:end,1:3:end);
+% 
+%     % Eigen value problem with only the free DOFS
+%     [V,D]=eig(Ka_d(2:end,2:end)\Ks_d(2:end,2:end)); 
+%     D=diag(D);
+%     D=D(D>0);% filter positive values
+%     qD=min(D);% retain the smallest one
+% 
+%     U_diverg = sqrt(qD/rho_inf);
 
 %     Uinf_ = linspace(0.1,200,200);
 %     U_diverg = [0];
@@ -239,7 +246,7 @@ if solve_modal == true
     grid minor
     hold off
     ylabel("$\gamma$","Interpreter","latex")
-    xlabel("Y [mm]",'Interpreter','latex')
+    xlabel("Y [m]",'Interpreter','latex')
 
     % Add legend to the side
     Lgnd = legend('show','interpreter','latex');
@@ -255,7 +262,7 @@ end
 if solve_flutter == true
 %Uinf_ = logspace(-10,-1,100);
 %Uinf_ = linspace(0.1,U_diverg(end),3);
-Uinf_ = linspace(0.1,60,100);
+Uinf_ = linspace(0.1,30,100);
 %Uinf_ = [20];
 
 % Get the eigenvalues of M and K
@@ -269,7 +276,9 @@ N_reduced = N_reduced_(k);
 
 % Initialize matrices
 p_values = zeros(length(Uinf_),1);
-p_values_collect = zeros(length(Uinf_),2*N_reduced);
+%p_values_collect = zeros(length(Uinf_),2*N_reduced);
+p_real = zeros(length(Uinf_),2*N_reduced);
+p_imag = zeros(length(Uinf_),2*N_reduced);
 
 for i = 1:length(Uinf_)
     U_inf = Uinf_(i);
@@ -296,6 +305,8 @@ for i = 1:length(Uinf_)
     [Vd, Dd] = eig(D);
 
     p_values(i) = max(real(-1./diag(Dd)));
+    p_real(i,:) = real(-1./diag(Dd));
+    p_imag(i,:) = imag(-1./diag(Dd));
     p_values_collect(i,:) = -1./diag(Dd);
 end
 
@@ -336,12 +347,22 @@ legend([strcat("$U_{flutter}$ = ",string(round(compute_flutter_velocity(p_values
 hold off
 saveas(gcf,'report/figures/Flutter_velocity','epsc')
 
+
+% post process of the diferent p values
+p_real = p_real(:,1:2:end);
+p_imag = p_imag(:,1:2:end);
+
+[p_imag,indexs] = sort(p_imag,2);
+for i =1:length(indexs(:,1))
+    p_real(i,:) = p_real(i,indexs(i,:));
+end
+
 figure()
 tcl = tiledlayout(2,1);
 %subplot(2,1,1)
 nexttile(tcl)
 hold on
-plot(Uinf_,real(p_values_collect),'.');
+plot(Uinf_,p_real,'.');
 ylabel("$Re(p_i)$",'Interpreter','latex')
 %legend('Location','eastoutside','Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
@@ -352,13 +373,13 @@ hold off
 %subplot(2,1,2)
 nexttile(tcl)
 hold on
-plot(Uinf_,abs(imag(p_values_collect))/2/pi,'.');
+plot(Uinf_,abs(p_imag)/2/pi,'.');
 ylabel("$|Im(p_i)|/2\pi$",'Interpreter','latex')
 xlabel("$U_{\infty}$",'Interpreter','latex')
 grid on
 grid minor
 hold off
-labels = ["Mode 1","Mode 1","Mode 2","Mode 2","Mode 3","Mode 3","Mode 4","Mode 4","Mode 5","Mode 5","Mode 6","Mode 6"];
+labels = ["Mode 1","Mode 2","Mode 3","Mode 4","Mode 5","Mode 6"];
 Lgnd = legend(labels,'interpreter','latex');
 Lgnd.Layout.Tile = 'East';
 saveas(gcf,'report/figures/Flutter_imag_real_p','epsc')

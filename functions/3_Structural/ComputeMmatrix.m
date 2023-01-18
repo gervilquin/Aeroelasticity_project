@@ -37,7 +37,7 @@ function M = ComputeMmatrix(y_el,Tn,Ts,material,t,c,x_sc,RibExist)
                              0,   54,    13*l,  0,   156,   -22*l;
                              0, -13*l, -3*l^2,  0, -22*l,   4*l^2];
 
-        d = xcm_e - x_sc*c;
+        d = xcm_e - x_sc;%*c;
         d_m = [ 1  0  0  0  0  0;
                -d  1  0  0  0  0;
                 0  0  1  0  0  0;
