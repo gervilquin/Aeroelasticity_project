@@ -24,11 +24,11 @@ function [I_alpha_u_0, I_alpha_u_1, I_alpha_u_2] = ComputeDisplacementsCoupling(
         end
         % Coupling values
         % Displacements
-        I_alpha_u_0(i,I) = I_alpha_u_0(i,I) + [N_theta(1), 0, 0, N_theta(2), 0, 0];
+        I_alpha_u_0(i,I) =  [N_theta(1), 0, 0, N_theta(2), 0, 0];
         % Velocities
-        I_alpha_u_1(i,I) = I_alpha_u_1(i,I) + (-1/U_inf) * [0, N_w(1), N_gamma(1)*(l/2), 0, N_w(2), N_gamma(2)*(l/2)];
+        I_alpha_u_1(i,I) =  (-1/U_inf) * [0, N_w(1), N_gamma(1)*(l/2), 0, N_w(2), N_gamma(2)*(l/2)];
         % Accelerations
-        I_alpha_u_2(i,I) = I_alpha_u_2(i,I) + zeros(1,6);
+        I_alpha_u_2(i,I) =  zeros(1,6);
 
     end
 end

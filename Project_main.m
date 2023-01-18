@@ -9,8 +9,8 @@ addpath(genpath('functions'))
 % Case solution active/deactivate
 solve_static = false; 
 solve_diverge = true;
-solve_modal = false;
-solve_flutter = false;
+solve_modal = true;
+solve_flutter = true;
 
 %% 1. Data input
 % Geometrical data
