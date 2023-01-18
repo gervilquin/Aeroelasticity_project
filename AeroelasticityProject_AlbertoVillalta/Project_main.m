@@ -7,7 +7,7 @@ clc, clear, close all
 addpath(genpath('functions'))
 
 % Case solution active/deactivate
-solve_static = false; 
+solve_static = true; 
 solve_diverge = true;
 solve_modal = true;
 solve_flutter = true;
@@ -90,19 +90,19 @@ I_fL = ComputeForcesCoupling(y_el,Tn,e);
 if solve_static == true
     [u] = StaticSolver(K,F,u_static,If,Ip);
     plotStaticSolution(u,F,L,y_el,U_inf,rho_inf,AoA,true)
-    saveas(gcf,'report/figures/static_solution','epsc')
+%    saveas(gcf,'report/figures/static_solution','epsc')
 end
 
 
 %% 7. Static solution with aerocoupling
 if solve_static == true
     [t,w,g] = AeroStaticSolver(y_el,u_static,If,Ip,I_fL,I_au_0,S,A,K,U_inf,rho_inf,AoA,true);
-    saveas(gcf,'report/figures/Aeroelastic_solution','epsc')
+%    saveas(gcf,'report/figures/Aeroelastic_solution','epsc')
 
 
 % plot static with aeroeastatic solutions
 plot2StaticSolution([u(1:3:end),u(2:3:end),u(3:3:end),t,w,g],F,L,y_el,U_inf,rho_inf,AoA,true)
-saveas(gcf,'report/figures/compare_static_solution','epsc')
+%saveas(gcf,'report/figures/compare_static_solution','epsc')
 
 % compute tip deflections for various AoA and velocities
 aoa = [5,10,5,10];
@@ -208,7 +208,7 @@ if solve_modal == true
     Lgnd = legend('show','interpreter','latex');
     Lgnd.Layout.Tile = 'East';
 
-    saveas(gcf,'report/figures/Natural_modes','epsc')
+%    saveas(gcf,'report/figures/Natural_modes','epsc')
 
 end
 
@@ -288,7 +288,7 @@ grid minor
 xlabel("Re($\hat{p}_i$)",'Interpreter','latex')
 ylabel("Im($\hat{p}_i$)",'Interpreter','latex')
 legend("Location",'eastoutside','Interpreter','latex')
-saveas(gcf,'report/figures/p_value_complex','epsc')
+%saveas(gcf,'report/figures/p_value_complex','epsc')
 
 hold off
 
@@ -302,7 +302,7 @@ xlabel("$U_{\infty}$",'Interpreter','latex')
 yline(0,'color','k')
 legend([strcat("$U_{flutter}$ = ",string(round(compute_flutter_velocity(p_values,Uinf_),2))," m/s")],'Interpreter','latex')
 hold off
-saveas(gcf,'report/figures/Flutter_velocity','epsc')
+%saveas(gcf,'report/figures/Flutter_velocity','epsc')
 
 
 % post process of the diferent p values
@@ -339,7 +339,7 @@ hold off
 labels = ["Mode 1","Mode 2","Mode 3","Mode 4","Mode 5","Mode 6"];
 Lgnd = legend(labels,'interpreter','latex');
 Lgnd.Layout.Tile = 'East';
-saveas(gcf,'report/figures/Flutter_imag_real_p','epsc')
+%saveas(gcf,'report/figures/Flutter_imag_real_p','epsc')
 
 end
 
